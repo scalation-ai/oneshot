@@ -17,6 +17,12 @@ synthesized groove, and recorded element sounds placed on their frames), ffmpeg 
 the engine as `bash "<this skill>/engine/film.sh" ...` from the user's current folder. Everything the skill
 makes goes in one folder there, `oneshot-output/`; nothing else in the user's folder changes.
 
+**Every choice the user makes goes through the question tool** (`AskUserQuestion` in Claude Code), never as
+options written out in a message for them to answer by typing: the concepts, a brand value marked "guess",
+which film is meant, the yes before `final`. Put the recommended option first with "(Recommended)" at the end
+of its label, keep labels to a few words, and put the reasons in each option's description. Only when the
+session has no such tool, write the options as a numbered list and say which one you recommend.
+
 ## Options
 
 The user may set these in words or as flags (`/oneshot --duration 15 --draft`). For anything not given,
@@ -132,7 +138,10 @@ For each, give: the hook frame (frame 1), **what carries every change of scene**
 cards? no cuts?), its edit style and opening (`references/styles.md`): no two of the three in the same
 style, and **its look**: the ground (one flat field: paper, a near-black room, the brand's own colour full
 bleed), the one accent, the type. Choose the look fresh for each film; the last film's look, or the
-templates' light stage, is never a silent default. Explain each in plain words, recommend one, and let the user pick. Then start the film in the picked
+templates' light stage, is never a silent default. Explain each in plain words, recommend one, and let the user pick
+with the question tool: one question, one option per concept, the recommended one first. Its label is the
+concept's name, its description the one-sentence idea, and its preview the hook frame, the carry, the style
+and opening, and the look. Wait for the answer before writing any script. Then start the film in the picked
 style and opening: `film.sh new <id> phone|desktop|app [secs] --style s --open o --mood m [--voice]
 [--format f,f]` (without `--style`, `new` picks one unlike the series' last film; offer that pick as one of
 the three).
