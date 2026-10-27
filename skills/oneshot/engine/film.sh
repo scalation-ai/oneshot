@@ -31,7 +31,8 @@
 #   voice     a film with a voice: speak its lines (films/voice/), time each where its words appear, say which run long
 #   audio     write the soundtrack from its score (films/<film>.score.cjs), the voice first if the film has one
 #   onsets    the soundtrack's strongest hits against the bar lines (does the sound land on the picture)
-#   listen    the soundtrack in numbers: hits a second, low end, mud, dings (REF=<clip> to compare with a reference)
+#   listen    the soundtrack in numbers: hits a second, low end, mud, dings, loudness against the series' other films
+#             (REF=<clip> to compare with a reference)
 #   preview   the film the user watches: 1x with motion blur (up to 8 captures on a moving frame, one on a hold), into
 #             renders/. A preview without the shutter strobes on every fast move and is judged on that
 #   quick     1x, one capture a frame, no motion blur: a fast look for yourself, never what the user is shown

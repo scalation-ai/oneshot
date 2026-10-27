@@ -3,8 +3,8 @@
 Every film has its own score, `films/<id>.score.cjs`, written by `engine/lib/sfx.js` (plain
 JavaScript, 48 kHz stereo, seeded so the same score always writes the same file): a groove synthesized
 note by note, and on top of it a few recorded element sounds from `engine/sounds/` (CC0). No stock
-music, no generated tracks: each sound sits on the frame it belongs to, because the score reads the
-same timeline as the picture.
+music, no generated tracks (a track the user supplies is the one exception: Moods and cues): each sound
+sits on the frame it belongs to, because the score reads the same timeline as the picture.
 
 ## A score
 
@@ -46,10 +46,18 @@ logo landing), a beat or two long, ending on a downbeat:
     bed(M, 'drive', { bpm: 120, bars: 13, from: 2, breaks: [[11, 12], [15, 16], [21, 22]] });
     [12, 16].forEach(t => M.add(reverse_swell(0.4), t - 0.4, 0.07));   // a breath into the drop, nothing more
 
-A licensed track the user supplies replaces `bed`: `const { sr, x } = readWav('track.wav');
-M.add(resample(x, sr, SR), 0, 0.8)` (a WAV at any rate, mixed to mono), then cut the picture to its
-downbeats and its drop rather than to a tempo of your choosing. Use only a track the user has the rights
-to, and say so in the script.
+**A track the user supplies** replaces `bed`: `track(M, 'music/launch.mp3', { from: 12.5, at: 0, breaks })`
+(a path from the score's folder; WAV, MP3, M4A or anything ffmpeg reads, kept in stereo). `from` is where in
+the file the film starts, `at` where on the film it comes in, `until` where it stops (the film's end), with a
+`fadeOut` (1.5 s) and `fadeIn` (0.02). It is laid on the groove's bus: a voice ducks it as deep as a groove,
+and `breaks` stop it dead the same way. It comes in at a groove's loudness, under the film's events; `gain`
+sets it from there. A finished track is denser than a groove, so the film comes out louder: give the score
+`M.write(out, { lufs: -14 })` (see Mix and checks). Then cut the picture to its downbeats and its drop, not
+to a tempo of your choosing: `film.sh <id> onsets` lists its strongest hits beside the bar lines.
+
+Only a track the user gave you, for this film, after they confirm they may use it in a published video
+(their own, or licensed for it). Never download or pick one yourself. Write its source and licence in a
+comment at the top of the score and in the script.
 
     drive     the launch film's groove: a kick on every beat with the weight in the low end, a snare on
               2 and 4, a bass on the offbeats, chords, a crash every 4 bars, a quiet top. 112 to 128 BPM
@@ -197,8 +205,16 @@ all how it says the brand's name and the numbers.
 
 ## Mix and checks
 
-- Peak about -1 dBFS, RMS -12 to -16 dBFS, hats low-passed, gentle saturation only. A film with a
-  voice sits near -17 dBFS: the voice's peaks set the level.
+- The master holds the true peak at -1.5 dBTP (peaks between the samples included), so the film's AAC,
+  which adds up to about 0.2 dB, stays under -1 dBTP and never clips on a phone. RMS -12 to -16 dBFS, hats
+  low-passed, gentle saturation only. A film with a voice sits near -17 dBFS: the voice's peaks set the level.
+- **Loudness, in LUFS** (BS.1770, as the platforms measure it). YouTube, Spotify and most feeds play
+  everything at about -14 LUFS: a louder film is turned down, and a quieter one is not always turned up.
+  The moods come out between about -12 (drive) and -17 (minimal); a supplied track, louder. Two films of
+  one series more than 2 LU apart play at different volumes next to each other: give every film's score
+  the same `M.write(out, { lufs: -16 })` (the series' quietest, -14 at most), which only turns a film down,
+  never up into its peaks. The score prints its LUFS and true peak each time it writes, the preview and
+  the final print their AAC's.
 - **`film.sh <id> listen` must PASS.** It reads the soundtrack in four numbers against a launch film
   measured for the skill (or against `REF=<clip>`, any film whose sound the user likes):
 
@@ -206,6 +222,8 @@ all how it says the brand's name and the numbers.
       low end         energy under 150 Hz (68%). THIN 15 points below: the kick and bass carry a film
       mud             energy at 150 to 600 Hz (18%). MUDDY 12 points above: a voice, pads, stacked notes
       dings           frames where one bright pitch stands out, the end card left out (8%). DINGY above 10% or 1.5 times it
+      LUFS            loudness. LOUD above -10, QUIET under -18; SERIES when the project's films are more than 2 LU apart
+      true peak       PEAKS over -1 dBTP: it clips once it is AAC
 
   It also prints both per two seconds, so a busy or dingy stretch points at the lines of the score
   that make it. The sonic logo's chime is expected to show in the last two seconds.

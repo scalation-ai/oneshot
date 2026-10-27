@@ -5,6 +5,8 @@
 // One ffmpeg decodes every capture once and scales it down; this script averages each frame's captures (a frame that
 // held still has one, passed through as it is); a second ffmpeg encodes the frames as they arrive. Nothing is written
 // to disk between the two, and the work grows with the captures taken, not with the shutter's most.
+// With a soundtrack, the film's own AAC is decoded again and its loudness and true peak printed: AAC can draw a peak a
+// little over the wav's, and over -1 dBTP it clips on a phone.
 // ffmpeg comes from ffmpeg-static, or $FFMPEG.
 'use strict';
 const { spawn } = require('child_process');
@@ -69,4 +71,13 @@ const write = buf => new Promise(res => enc.stdin.write(buf) ? res() : enc.stdin
   fs.rmSync(list, { force: true });
   if (dc !== 0 || ec !== 0 || frame !== counts.length) { console.error(`encode failed: ${frame} of ${counts.length} frames (decoder ${dc}, encoder ${ec})`); process.exit(1); }
   console.log('wrote', out, (fs.statSync(out).size / 1e6).toFixed(1) + ' MB');
+  if (wav && wav !== 'none') {
+    const { loudness } = require(path.join(__dirname, '..', 'lib', 'sfx.js'));
+    const raw = require('child_process').execFileSync(FF, ['-v', 'error', '-i', out, '-vn', '-ac', '2', '-ar', '48000', '-f', 'f32le', '-'], { maxBuffer: 1 << 30 });
+    const x = new Float32Array(raw.buffer, raw.byteOffset, raw.length / 4), n = x.length >> 1, L = new Float64Array(n), R = new Float64Array(n);
+    for (let i = 0; i < n; i++) { L[i] = x[2 * i]; R[i] = x[2 * i + 1]; }
+    const ld = loudness([L, R]);
+    console.log(`sound in the film: ${ld.lufs.toFixed(1)} LUFS, true peak ${ld.tp.toFixed(2)} dBTP`);
+    if (ld.tp > -1) console.log('WARN the AAC peaks over -1 dBTP and may clip on a phone: write the soundtrack again (film.sh <film> audio), or lower a track');
+  }
 })().catch(e => { console.error(e.stack || e.message); process.exit(1); });
