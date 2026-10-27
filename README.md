@@ -19,12 +19,22 @@ film, renders it frame by frame and reviews it before handing it over.
 
 ## Install
 
-Claude Code:
+Claude Code, for you in every project:
 
 ```
 /plugin marketplace add scalation-ai/oneshot
 /plugin install oneshot@oneshot
 ```
+
+Or for one repository only. From a terminal in the repository:
+
+```
+claude plugin marketplace add scalation-ai/oneshot --scope project
+claude plugin install oneshot@oneshot --scope project
+```
+
+Commit `.claude/settings.json`: everyone who opens the repository in Claude Code and trusts the folder
+gets oneshot. Use `--scope local` instead to keep it to yourself in that repository.
 
 Other agents, or Claude Code without plugins:
 
@@ -45,7 +55,8 @@ claude plugin update oneshot@oneshot
 ```
 
 Or open `/plugin`, choose oneshot on the **Installed** tab, then **Update now**. Run `/reload-plugins`
-or start a new session to use it. To update automatically instead, open `/plugin`, choose oneshot on
+or start a new session to use it. In a repository that installs it for itself, run the commands there:
+they update the repository's copy. To update automatically instead, open `/plugin`, choose oneshot on
 the **Marketplaces** tab, then **Enable auto-update**.
 
 ## Requirements
