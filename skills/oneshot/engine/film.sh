@@ -51,6 +51,8 @@ OLD_DIR=motion-clip-output                             # the same, from before t
 [ -z "$1" ] && { usage; exit 1; }
 command -v node >/dev/null || { echo "Node.js is missing. Install the LTS from https://nodejs.org, then run: bash \"$ENGINE/setup.sh\""; exit 1; }
 [ -d "$ENGINE/node_modules/playwright" ] || { echo "The engine is not set up yet. Run once: bash \"$ENGINE/setup.sh\""; exit 1; }
+# setup.sh keeps a copy of the lock it installed: a different one means the skill was updated since
+cmp -s "$ENGINE/package-lock.json" "$ENGINE/node_modules/.oneshot-setup" || { echo "The skill was updated since the engine was set up. Run once: bash \"$ENGINE/setup.sh\""; exit 1; }
 export NODE_PATH="$ENGINE/lib${NODE_PATH:+:$NODE_PATH}"   # scores load the sound kit: require('sfx')
 json(){ node -e "$1" "${@:2}"; }
 
