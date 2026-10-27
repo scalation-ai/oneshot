@@ -5,6 +5,7 @@ html,body{height:100%;background:#000;overflow:hidden}
 .a{position:absolute}
 .lm{display:inline-block;overflow:hidden;vertical-align:top;padding:0 .04em .1em;margin:0 -.04em -.1em}
 .lc{display:inline-block}
+.lm.tall,.lm.tall>.lc{padding-top:.4em;margin-top:-.4em}
 .blob{position:absolute;left:0;top:0;border-radius:50%}
 .phone{position:absolute;border-radius:124px;background:linear-gradient(155deg,#343844 0%,#16181d 30%,#0d0f13 64%,#262a33 100%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.14),inset 0 0 0 10px #050608,0 70px 150px rgba(0,0,0,.62),0 0 140px rgba(var(--acc-rgb),.18)}
 .pbtn{position:absolute;background:linear-gradient(90deg,#1b1e24,#3a3f4a);border-radius:4px}
