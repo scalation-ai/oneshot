@@ -7,6 +7,11 @@ survivor is the carry. Every change of scene needs one, and `film.sh <id> read` 
 `engine/lib/moves.js` holds the moves. Include it after `lib.js` (and `desk.js`) and before `edit.js`; the
 templates already do. Every move is a function of time, so `render(t)` stays pure.
 
+**See them before picking one:** `film.sh gallery` plays every move below in the project's brand and makes
+each a contact sheet (`renders/gallery/sheets/<move>.png`): six frames across the move and, under them, the
+fastest travel on screen per frame. The frames are evenly spaced in time across the move, so their spacing is
+the curve: they bunch where it slows. Open `renders/gallery/index.html` to watch them live.
+
 ## Which carry for which change
 
 | The change | The carry | How |

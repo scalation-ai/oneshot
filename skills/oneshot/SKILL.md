@@ -294,12 +294,14 @@ y 1000. `read` measures both on the real frames.
     film.sh <id> gif [format]                         a looping GIF of it (no sound)
     (a format is phone, wide, square or 4x5; `all` runs a command for every format the film has)
     film.sh studio                                    every film, every format, with sound
+    film.sh gallery                                   every move, style and opening, live and as contact sheets
 
 1. The concepts (section 3), the user's pick, then `new` in that style and opening. Then the **script**:
    the bar-by-bar table with the carry column, numbers from `story.md`, lines checked against `rules.md`.
    Show it before building.
 2. Rebuild the screens, set the shots, the beats and each scene's carry. The library and its traps:
-   `references/engine.md`; the carries and springs: `references/moves.md`.
+   `references/engine.md`; the carries and springs: `references/moves.md`. Pick them by looking: `film.sh
+   gallery` draws each one in the brand, with its speed.
 3. Write the score. Then `check` (it must say pure), then **`read` in every format**: carry 0.6 or more with
    no bare change, rhythm and cross-fade not failing, every legibility and safe-zone warning fixed or
    explained (`references/read.md`). Look at the frames either side of every change in its report: a

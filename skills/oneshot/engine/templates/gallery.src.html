@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>moves</title>
+<!--FONTS-->
+<style>/*CSS*/</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+(function(){
+"use strict";
+const FILM_FORMAT='desktop';
+//INCLUDE lib.js
+//INCLUDE moves.js
+//INCLUDE edit.js
+/* =====================================================================
+   The moves of moves.js, one at a time, for film.sh gallery: ?demo=<name> plays one (tools/gallery.cjs lists them
+   and makes each a contact sheet with its speed). Each demo is the library's own call, at the values
+   references/moves.md gives a film, on a 1920 x 1080 stage in the brand's colours.
+   ===================================================================== */
+const D=Q.get('demo')||'land';
+const DEMOS={
+  settle:{dur:3,call:"spr(t,at,a,b,'settle')",says:'SPRING.settle, f 1.4 z .9: a card or a panel coming to rest'},
+  land:{dur:3,call:"spr(t,at,a,b,'land')",says:'SPRING.land, f 2.2 z .72: a thing arriving with a little give, 4% past'},
+  snap:{dur:3,call:"spr(t,at,a,b,'snap')",says:'SPRING.snap, f 3.4 z .86: a fast, firm stop'},
+  squash:{dur:3,call:'squash(springV(t,o)*distance)',says:'squash: stretched along the motion while fast, the area kept'},
+  kick:{dur:3,call:'kick(t,[landing],{amp})',says:'kick: the give of a landing, a decaying sine summed into a scale'},
+  operator:{dur:4,call:'Cut opt.operator {float,shake,holds}',says:'operate: a hand on the camera, a float, a shake on each hit, dead still in the rest; a few px at a film\'s values: watch it live'},
+  rig:{dur:3.5,call:'Rig(want,{w,z,hits,shake})',says:'Rig: keyed shots followed on springs, a calm follow, then a whip that lands with a shake'},
+  chase:{dur:3,call:'chase(fn,t,lag)',says:'chase: the camera trails its subject and settles after it (the cross is the frame centre)'},
+  fly:{dur:3,call:'scene.carry {from,to} / Fly(from,to,{t0,t1})',says:'Fly: the row on the last screen becomes the card on the next, a shared element'},
+  iris:{dur:3,call:'Iris(el,{x,y,t0})',says:'Iris: the next screen opens out of the point the eye is on'},
+  lattice:{dur:3,call:'Lattice(LW,{depth}).set(shot)',says:'Lattice: a faint far field the camera moves against, so a dive reads on a flat ground'},
+};
+if(!DEMOS[D])throw new Error(`gallery: no demo "${D}" (${Object.keys(DEMOS).join(', ')})`);
+const {dur:DUR}=DEMOS[D];window.__demo={name:D,...DEMOS[D]};window.__demos=Object.keys(DEMOS);
+
+// the caption: chrome, so read and the speed graph never count it
+const CAP=el('div','a',LC);css(CAP,`left:60px;top:44px;font-family:"${FONT.head}";font-weight:700;font-size:34px;letter-spacing:-.01em;color:${ST.text}`);
+CAP.innerHTML=`${D} <span style="font-family:'${FONT.body}';font-weight:500;font-size:26px;color:${ST.quiet}">&nbsp;${DEMOS[D].call}</span>`;
+const ONK=LIGHT?INK_RGB:'255,255,255',FAINT=`rgba(${ONK},.18)`;
+const card=(p,x,y,w,h,txt,st)=>{const c=box(el('div','a',p),x,y,w,h);css(c,`background:#fff;border-radius:22px;box-shadow:inset 0 0 0 2px ${C.border};font-family:"${FONT.body}";font-weight:600;font-size:34px;color:${C.ink};padding:28px 34px;white-space:nowrap;${st||''}`);if(txt)c.textContent=txt;return c;};
+const dot=(p,d)=>{const e=el('div','pdot',p);css(e,`left:0;top:0;width:${d}px;height:${d}px;box-shadow:0 0 30px rgba(${C.accentRGB},.6)`);return e;};
+const hair=(p,x,y,w,h)=>css(box(el('div','a',p),x,y,w,h),`background:${FAINT}`);
+// the world the camera demos look at: three cards on a faint lattice, 1920 x 1080
+function world(){const lat=Lattice(LW,{color:`rgba(${ONK},.12)`}),g=el('div','layer',LW);
+  const cards=[[260,250,'Invoices'],[780,600,'Paid'],[1260,250,'This week']].map(([x,y,s])=>card(g,x,y,420,240,s));
+  return {lat,g,cards,cam:camTo(g,1920),centre:c=>[c.offsetLeft+210,c.offsetTop+120]};}
+const shotAt=(cx,cy,w)=>({l:cx-w/2,t:cy-w*9/32,w});
+
+let R;
+if(SPRING[D]){   // a dot springing from the left mark to the right one, released at 0.5 s
+  hair(LW,300,330,2,420);hair(LW,1500,330,2,420);hair(LW,300,539,1202,2);
+  const d=dot(LW,120);R=t=>{const x=spr(t,.5,300,1500,D);d.style.transform=`translate(${x-60}px,${480}px)`;};}
+else if(D==='squash'){hair(LW,300,330,2,420);hair(LW,1500,330,2,420);
+  const d=dot(LW,120);R=t=>{const x=spr(t,.5,300,1500,'snap'),[a,c]=squash(springV(t-.5,SPRING.snap)*1200);
+    d.style.transform=`translate(${x-60}px,${480}px) scale(${a},${c})`;};}
+else if(D==='kick'){hair(LW,560,840,800,2);
+  const c=card(LW,710,0,500,300,'Paid',`transform-origin:50% 100%;font-size:48px`);
+  R=t=>{const y=lerp(-360,540,E.inQuad(inv(.4,.85,t))),k=kick(t,[.85],{amp:.09});
+    c.style.transform=`translateY(${y}px) scale(${1+.5*k},${1-k})`;};}
+else if(D==='operator'){const W_=world(),HITS=[1.1,2.1];
+  R=t=>{const sh=operate({l:0,t:0,w:1920},t,{float:.003,shake:.012,hits:HITS,holds:[[2.8,4.4]],aspect:9/16});W_.cam(sh);W_.lat.set(sh);};}
+else if(D==='rig'){const W_=world(),[ax,ay]=W_.centre(W_.cards[0]),[cx,cy]=W_.centre(W_.cards[2]);
+  const want=t=>t<.6?{l:0,t:0,w:1920}:t<1.7?shotAt(ax,ay,1920/2.2):shotAt(cx,cy,1920/2.2);
+  const rig=Rig(want,{dur:DUR,z:.88,w:t=>t<1.6?7:15,hits:[2.05],shake:9});
+  R=t=>{const sh=rig(t);W_.cam(sh);W_.lat.set(sh);};}
+else if(D==='chase'){const lat=Lattice(LW,{color:`rgba(${ONK},.12)`}),g=el('div','layer',LW),cam=camTo(g,1920);
+  for(let i=0;i<6;i++)card(g,120+i*300,700,220,140,'',`opacity:.55`);
+  const d=dot(g,90),p=t=>{const u=E.inOutCubic(inv(.3,2.3,t));return [260+1400*u,470-170*Math.sin(Math.PI*u)];};
+  const cross=el('div','a',LC);css(cross,`left:${CXS-30}px;top:${CYS-30}px;width:60px;height:60px;background:linear-gradient(${FAINT},${FAINT}) 29px 0/2px 60px no-repeat,linear-gradient(${FAINT},${FAINT}) 0 29px/60px 2px no-repeat`);
+  R=t=>{const [x,y]=p(t),[mx,my]=chase(p,t,.18),sh=shotAt(mx,my,1500);cam(sh);lat.set(sh);d.style.transform=`translate(${x-45}px,${y-45}px)`;};}
+else if(D==='fly'){
+  const A=el('div','layer',LW),Bs=el('div','layer',LW),pa=card(A,560,190,800,700,'',`background:${C.surf}`);
+  const rows=['Northwind','Bluebird','Kestrel','Osprey'].map((s,i)=>card(pa,40,40+i*150,720,120,s,`padding:38px 34px`));
+  const det=card(Bs,460,190,1000,560,'Bluebird',`font-size:64px;padding:48px 56px`);
+  card(det,56,170,888,90,'Paid on the 14th',`font-weight:500;font-size:32px;color:${C.body};background:${C.surf};box-shadow:none;padding:26px 30px`);
+  const F=Fly(rows[1],det,{t0:1.05,t1:1.95,arc:40});
+  R=t=>{vis(A,t<1.5);vis(Bs,t>=1.5);flights(t,[F]);};}
+else if(D==='iris'){
+  const A=el('div','layer',LW),pa=card(A,560,190,800,700,'',`background:${C.surf}`);
+  ['Northwind','Bluebird','Kestrel'].forEach((s,i)=>card(pa,40,40+i*150,720,120,s,`padding:38px 34px`));
+  const btn=card(pa,40,520,720,120,'Send all three',`background:${C.accent};color:#fff;box-shadow:none;text-align:center;padding:38px 0`);
+  const Bs=el('div','layer',LW);css(Bs,`background:${C.surf}`);
+  const n=el('div','a',Bs,'3 sent');css(n,`left:0;width:1920px;top:400px;text-align:center;font-family:"${FONT.head}";font-weight:700;font-size:200px;color:${C.ink};letter-spacing:-.03em`);
+  const ir=Iris(Bs,{x:960,y:190+520+60,t0:1,dur:.7});
+  R=t=>{btn.style.transform=`scale(${1-.04*Math.sin(Math.PI*inv(.75,.95,t))})`;ir.render(t);};}
+else if(D==='lattice'){const W_=world(),[cx,cy]=W_.centre(W_.cards[1]);
+  const a={l:0,t:0,w:1920},b=shotAt(cx,cy,1920/4);
+  R=t=>{const sh=zoomShot(a,b,E.inOutCubic(inv(.4,2.6,t)));W_.cam(sh);W_.lat.set(sh);};}
+
+function render(t){aurora(t,.6);R(t);}
+boot(DUR,render);
+})();
+</script>
+</body>
+</html>
