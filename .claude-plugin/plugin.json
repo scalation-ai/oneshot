@@ -1,7 +1,7 @@
 {
   "name": "oneshot",
   "description": "Make short product films from a product's real screens, rendered from code, where every scene grows out of the last instead of replacing it.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "Scalation",
     "url": "https://scalation.ai"
