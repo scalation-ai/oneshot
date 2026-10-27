@@ -3,4 +3,6 @@ node_modules/
 # A film project made while trying the skill inside this repository
 oneshot-output/
 motion-clip-output/
+# film.sh gallery run without a project
+skills/oneshot/engine/gallery/
 .DS_Store

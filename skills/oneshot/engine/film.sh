@@ -15,6 +15,9 @@
 #   ref       film.sh ref <video>   a reference film in numbers (cuts, shot lengths, bursts, stillness, energy) into
 #             reference/<video name>/ref.html, before a script is written against its feel
 #   studio    open studio.html: every film of the project, both formats, with sound, scrubbable
+#   gallery   every move of the library and every edit style and opening, live and as contact sheets with their speed,
+#             to pick by looking: into renders/gallery/ in the project's brand (without a project, the engine's own
+#             gallery/ folder, in its defaults); open its index.html
 #   and per film, film.sh <film> <command> [format]:
 #   build     inline the brand, fonts and library into films/<film>.html (every command does this first)
 #   check     page errors, the engine's warnings, and whether render(t) is pure (frames out of order match)
@@ -69,6 +72,10 @@ if [ "$1" = ref ]; then   # a reference film: into the project's reference/ if t
   V="$(cd "$CALLER" && cd "$(dirname "$2")" 2>/dev/null && pwd)/$(basename "$2")"; [ -f "$V" ] || { echo "'$2' is not a file"; exit 1; }
   N="$(basename "${2%.*}")"; if [ -f "$PROJ/films.json" ]; then O="$PROJ/reference/$N"; else O="$CALLER/$N-ref"; fi
   node "$ENGINE/tools/ref.cjs" "$V" "$O"; exit $?
+fi
+if [ "$1" = gallery ]; then   # in the project's brand when there is a project, else in the engine's defaults
+  if [ -f "$PROJ/films.json" ]; then P="$(cd "$PROJ" && pwd)"; node "$ENGINE/tools/gallery.cjs" "$P/renders/gallery" "$P"
+  else node "$ENGINE/tools/gallery.cjs" "$ENGINE/gallery"; fi; exit $?
 fi
 [ -f "$PROJ/films.json" ] || { echo "No film project here. Set one up with: bash \"$ENGINE/film.sh\" init (it makes ./$OUT_DIR)"; exit 1; }
 PROJ="$(cd "$PROJ" && pwd)"; export MOTION_PROJECT="$PROJ"   # so the commands film.sh runs itself find it too
