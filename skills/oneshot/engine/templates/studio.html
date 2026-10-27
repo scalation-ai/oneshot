@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Motion Studio</title>
+<style>
+:root{--bg:#0B0E14;--panel:#121722;--line:#232a38;--text:#E8ECF3;--muted:#8B93A3;--blue:#5468FF;--blue2:#7A8BFF}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+body{display:grid;grid-template-columns:300px 1fr;height:100vh;overflow:hidden}
+aside{border-right:1px solid var(--line);padding:22px 18px;overflow:auto}
+h1{font-weight:700;font-size:20px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+h1 i{width:10px;height:10px;border-radius:50%;background:var(--blue);box-shadow:0 0 12px rgba(84,104,255,.8)}
+.sub{color:var(--muted);font-size:13px;margin:6px 0 22px;line-height:1.45}
+.film{display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;color:var(--text);cursor:pointer;font:inherit}
+.film:hover{border-color:#34405a}
+.film.on{border-color:var(--blue2);box-shadow:0 0 0 1px var(--blue2) inset}
+.film b{display:block;font-size:15px;margin-bottom:4px}
+.film span{color:var(--muted);font-size:12px}
+.tag{display:inline-block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#C9D6FF;border:1px solid rgba(122,139,255,.7);border-radius:10px;padding:1px 8px;margin-left:6px;vertical-align:1px}
+.note{margin-top:18px;color:var(--muted);font-size:12px;line-height:1.5;border-top:1px solid var(--line);padding-top:14px}
+.note code{color:var(--text);font-size:11.5px}
+main{display:grid;grid-template-rows:1fr auto;min-height:0}
+#stage{display:flex;align-items:center;justify-content:center;min-height:0;padding:18px}
+iframe{border:0;border-radius:10px;background:#000;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.bar{border-top:1px solid var(--line);padding:14px 22px;display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center}
+.btn{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer}
+.btn:hover{border-color:#34405a}
+.btn.pri{background:var(--blue);border-color:var(--blue);font-weight:700;min-width:84px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{background:transparent;border:0;color:var(--muted);padding:8px 12px;font:inherit;font-size:13px;cursor:pointer}
+.seg button.on{background:#1d2433;color:var(--text)}
+.row{display:flex;gap:10px;align-items:center}
+input[type=range]{width:100%;accent-color:var(--blue)}
+#clock{font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted);white-space:nowrap}
+#clock b{color:var(--text);font-weight:700}
+a{color:#9FB6FF}
+</style>
+</head>
+<body>
+<aside>
+  <h1><i></i>Motion Studio</h1>
+  <p class="sub">Every film in this project, live from its source, in each of its formats, with its soundtrack. Nothing here is a video file: each film is drawn in the browser, frame by frame, from the same code that renders the MP4.</p>
+  <div id="list"></div>
+  <div class="note">
+    Space plays and pauses. The arrow keys step one frame. The page reads the films from <code>films/</code>. <code>film.sh studio</code> rebuilds them and reopens it.<br><br>
+    To render an MP4: <code>film.sh &lt;film&gt; preview</code> (add <code>wide</code> for 16:9).
+  </div>
+</aside>
+<main>
+  <div id="stage"><iframe id="fr" title="film"></iframe></div>
+  <div class="bar">
+    <div class="row">
+      <button class="btn pri" id="play">Play</button>
+      <button class="btn" id="back" title="One frame back">&#8592;</button>
+      <button class="btn" id="fwd" title="One frame forward">&#8594;</button>
+      <span class="seg" id="fmt"><button data-f="9x16">9:16</button><button data-f="16x9">16:9</button><button data-f="1x1">1:1</button><button data-f="4x5">4:5</button></span>
+      <button class="btn" id="snd">Sound on</button>
+    </div>
+    <input type="range" id="scrub" min="0" max="15" step="0.001" value="0">
+    <div class="row"><span id="note" style="color:#E0B455;font-size:12px;max-width:220px"></span><span id="clock"><b>0.00</b> s</span><button class="btn" id="open">Open alone</button></div>
+  </div>
+</main>
+<audio id="au" preload="auto" loop></audio>
+<script src="films/films.js"></script>
+<script>
+// the films come from films.json (film.sh writes films/films.js from it)
+const FILMS=window.MOTION_FILMS||[];
+const $=s=>document.querySelector(s),fr=$('#fr'),au=$('#au'),scrub=$('#scrub');
+let film=FILMS[0],fmt='9x16',playing=false,t=0,muted=false;
+function post(){try{fr.contentWindow.postMessage({seek:t},'*');}catch(e){}}
+function size(){const st=$('#stage'),W=st.clientWidth-36,H=st.clientHeight-36,a={'9x16':9/16,'16x9':16/9,'1x1':1,'4x5':4/5}[fmt];let w=W,h=W/a;if(h>H){h=H;w=H*a;}fr.style.width=w+'px';fr.style.height=h+'px';}
+function clock(){const B=60/film.bpm,bar=Math.floor(t/(4*B))+1,beat=Math.floor(t/B)%4+1;$('#clock').innerHTML=`<b>${t.toFixed(2)}</b> s, bar ${bar}, beat ${beat}`;scrub.value=t;}
+function load(f,keepT){film=f;document.querySelectorAll('.film').forEach(b=>b.classList.toggle('on',b.dataset.id===f.id));
+  scrub.max=f.dur;if(!keepT)t=0;au.src=f.wav;au.muted=muted;au.currentTime=t;
+  if(!f.formats.includes(fmt))fmt=f.formats[0];
+  const q=f.q[fmt];fr.src=f.src+(q?'?'+q:'');fr.onload=()=>{post();};
+  document.querySelectorAll('#fmt button').forEach(b=>{b.classList.toggle('on',b.dataset.f===fmt);b.disabled=!f.formats.includes(b.dataset.f);b.style.opacity=b.disabled?.35:1;});
+  $('#note').textContent=f.note||'';size();clock();if(playing)au.play();}
+function tick(){if(playing){t=au.currentTime%film.dur;post();clock();}requestAnimationFrame(tick);}
+function setPlay(p){playing=p;$('#play').textContent=p?'Pause':'Play';if(p){au.currentTime=t;au.play().catch(()=>{});}else au.pause();}
+function step(d){setPlay(false);t=Math.min(film.dur-1/60,Math.max(0,Math.round(t*60+d)/60));post();clock();}
+$('#list').innerHTML=FILMS.length?FILMS.map(f=>`<button class="film" data-id="${f.id}"><b>${f.title}${f.tag?`<span class="tag">${f.tag}</span>`:''}</b><span>${f.dur} s, ${f.bpm} BPM, ${f.formats.map(x=>x.replace('x',':')).join(' and ')}</span></button>`).join(''):'<p class="sub">No films yet. Start one from this folder: film.sh new &lt;id&gt; phone</p>';
+document.querySelectorAll('.film').forEach(b=>b.onclick=()=>load(FILMS.find(f=>f.id===b.dataset.id)));
+document.querySelectorAll('#fmt button').forEach(b=>b.onclick=()=>{fmt=b.dataset.f;load(film,true);});
+$('#play').onclick=()=>setPlay(!playing);$('#back').onclick=()=>step(-1);$('#fwd').onclick=()=>step(1);
+$('#snd').onclick=()=>{muted=!muted;au.muted=muted;$('#snd').textContent=muted?'Sound off':'Sound on';};
+$('#open').onclick=()=>window.open(fr.src,'_blank');
+scrub.oninput=()=>{t=+scrub.value;au.currentTime=t;post();clock();};
+addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();setPlay(!playing);}if(e.code==='ArrowRight')step(1);if(e.code==='ArrowLeft')step(-1);});
+addEventListener('resize',size);
+if(FILMS.length)load(FILMS[0]);requestAnimationFrame(tick);
+</script>
+</body>
+</html>

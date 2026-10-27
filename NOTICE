@@ -1,0 +1,12 @@
+oneshot
+Copyright 2026 Scalation Co., Ltd.
+
+This product includes third-party files, each under its own licence, kept next to it in
+skills/oneshot/engine/:
+
+- DM Sans and Space Grotesk fonts, SIL Open Font License 1.1 (fonts/OFL-dmsans.txt,
+  fonts/OFL-spacegrotesk.txt).
+- Sound recordings in the public domain under CC0 1.0, by Kenney, unicaegames and the Sonic Pi
+  sample library, each listed with its source in sounds/LICENSE.md.
+- World map data from world-atlas, Copyright 2013-2019 Michael Bostock, ISC licence
+  (data/LICENSE-world-atlas.txt).

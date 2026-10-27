@@ -1,0 +1,9 @@
+# made by film.sh; the sources are films/*.src.html and films/*.score.cjs
+films/*.html
+!films/*.src.html
+films/*.wav
+films/films.js
+films/*.voice.json
+films/voice/
+studio.html
+renders/

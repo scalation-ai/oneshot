@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__ID__</title>
+<!--FONTS-->
+<style>/*CSS*/</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+(function(){
+"use strict";
+//INCLUDE lib.js
+//INCLUDE moves.js
+//INCLUDE edit.js
+/* =====================================================================
+   __ID__, a 9:16 phone film (the 16:9 cut comes free: ?w=1).  __SECS__ s, __BPM__ BPM, __BARS__ bars.
+   Style __STYLE__, opening __OPEN__, mood __MOOD__: picked by film.sh new (references/styles.md).
+   Three scenes (the situation, the action, the result), the promise, the end card. Start from the film's
+   script; replace every line marked TODO. Numbers only from the story file. Rebuild the real screens
+   natively; a screen that a second film needs becomes its own function in its own file, pulled in with //INCLUDE.
+   ===================================================================== */
+const BPM=128,B=60/BPM,BAR=4*B,DUR=8*BAR,TB=n=>n*BAR;
+const LAST=Math.round(DUR/BAR)-1,PROM=LAST-1;          // the end card's bar and the promise line's bar, whatever the length
+const SC=[0,Math.round(PROM*.36),Math.round(PROM*.68)]; // the bar each scene starts on                       TODO from the script
+const LOOK=Look('__STYLE__');
+
+const KICK=Kicker('Feature name');                                                // TODO the feature's name, as the product shows it
+//IF glide punch dive type
+const P=Phone(LW,{time:'08:30'});
+const VIEW=el('div','layer',P.app);css(VIEW,'overflow:hidden;border-radius:108px');   // the screens change inside the phone's screen
+const SCR=[0,1,2].map(()=>el('div','layer',VIEW));                                     // the three screens, 916 px wide
+const WORLD=P.wrap,ELS=SCR,DECK=null,CAM=camTo(P.cam,1080),fade=m=>P.maskDef(m);
+const WX=x=>PH.sx+x,WY=y=>PH.sy+y,K=1;                                                 // a screen point in the world
+//IF deck
+const WORLD=Faded(LW),CAMV=el('div','layer',WORLD);
+const CARDS=[0,1,2].map(()=>PhoneCard(CAMV,{time:'08:30'}));                           // the three screens, as cards
+const SCR=CARDS.map(c=>c.app),ELS=[null,null,null],DECK=Deck(CARDS.map(c=>c.el),{step:800}),CAM=camTo(CAMV,1080),fade=m=>WORLD.fade(m);
+const WX=x=>CARDS[0].x+CARDS[0].k*x,WY=y=>CARDS[0].y+CARDS[0].k*y,K=CARDS[0].k;       // a point of the centred card, in the world
+//IF punch dive type deck
+wideWindow();                             // 16:9: the zoomed world stays in a window left of the lines
+//END
+WORLD.style.transformOrigin='540px 700px';
+// a shot: screen point (x,y) at the frame's (540,780), the screen z times the size it has in the phone
+const aim=(x,y,z)=>{const w=1080*K/z;return {l:WX(x)-540*w/1080,t:WY(y)-780*w/1080,w};};
+
+// TODO rebuild the real screens, pixel-matched to captures of them (never the captures themselves). Keep what a
+// scene is about in the screen's top 950 px: the phone fades into the stage below that. Placeholders:
+const txt=(p,x,y,s,st)=>css(box(el('div','a',p,s),x,y),`font-family:"${FONT.body}";white-space:nowrap;${st||''}`);
+const chip=(p,y,s,ok)=>css(el('div','a',p,s),`right:34px;top:${y}px;padding:6px 20px;border-radius:24px;font-family:"${FONT.body}";font-weight:600;font-size:28px;color:${ok?C.green:C.amber};background:${ok?C.greenT:C.amberT}`);
+function header(p,title,sub){css(box(el('div','a',p),40,150,8,92),`background:${C.accent};border-radius:4px`);
+  txt(p,66,142,title,`font-weight:700;font-size:56px;letter-spacing:-.02em;color:${C.ink};line-height:1.1`);
+  txt(p,66,210,sub,`font-size:30px;color:${C.muted}`);}
+// 1 the situation: a list, and the one row the film is about
+header(SCR[0],'Feature name','What this screen lists');
+const DIM=el('div','layer',SCR[0]);css(DIM,`background:${C.night};z-index:5;opacity:0`);   // the Lift: the rest dims
+const ROWS=['First item','Second item','Third item','Fourth item'].map((s,i)=>{const r=box(el('div','card',SCR[0]),40,300+i*150,836,128);
+  txt(r,34,40,s,`font-weight:600;font-size:36px;color:${C.ink}`);chip(r,40,i===1?'Waiting':'Done',i!==1);return r;});
+ROWS[1].style.zIndex=6;
+// 2 the action: the row opened, the button the user taps; its status flips
+header(SCR[1],'Second item','The detail of the row');
+const DET=box(el('div','card',SCR[1]),40,300,836,300);
+css(box(el('div','a lbl',DET,'STATUS'),34,40),'');
+const WAIT=chip(DET,32,'Waiting',false),DONE=chip(DET,32,'Done',true);
+txt(DET,34,130,'One line about the item',`font-size:34px;color:${C.body}`);
+txt(DET,34,190,'and a second one',`font-size:34px;color:${C.body}`);
+const BTN=box(el('div','a',SCR[1],'Do the thing'),40,660,836,120);
+css(BTN,`border-radius:60px;background:${C.accent};color:#fff;text-align:center;line-height:120px;font-family:"${FONT.body}";font-weight:700;font-size:40px`);
+const SAID=txt(SCR[1],40,820,'What changed, in the app\'s own words',`font-size:32px;font-weight:500;color:${C.body}`);   // the app confirms
+// 3 the result: the number that moved
+header(SCR[2],'Overview','This week');
+const CARD=box(el('div','card',SCR[2]),40,300,836,300);
+css(box(el('div','a lbl',CARD,'THIS WEEK'),34,40),'');
+const val=box(el('div','a',CARD),34,100);css(val,`display:flex;align-items:center;font-family:"${FONT.head}";font-weight:700;font-size:120px;color:${C.ink}`);
+el('span','',val,'$');const ROLL=Roller(val,{digits:3,size:120,color:C.ink});
+
+// the beats: the Lift in the situation, the tap and the flip in the action, the number and its pin in the result  TODO
+//IF open:result
+const REWIND=TB(1);                         // the result first, for one bar; then the story from its start
+//IF open:problem open:closeup
+const REWIND=0;
+//END
+const SHOWN=b=>TB(b)+(LOOK.name==='type'?BAR:0);      // when a scene's screen is in full view (type: once the veil has gone)
+const LIFT=SHOWN(0)+REWIND+B,WHY=LIFT+BAR,TAP=SHOWN(SC[1])+2*B,FLIP=TAP+B/2,SAIDT=FLIP+B,ROLLT=SHOWN(SC[2])+2*B,PINT=ROLLT+.8;
+const WHY_ON=TB(SC[1])-.3-WHY>1.4;                    // the first pin only when the scene holds it long enough to read
+const TAPS=Tap(SCR[1],{x:458,y:720,at:TAP});
+const PIN1=Pin(SCR[0],{x:640,y:514,cx:330,cy:330,html:'Why this row matters',size:36});   // TODO the pins' words (three pins at most)
+const PIN=Pin(SCR[2],{x:430,y:470,cx:120,cy:680,html:'One pin, a few words',size:40});
+[PIN1.svg,PIN1.dot,PIN1.chip].forEach(e=>{e.style.zIndex=7;});   // above the Lift's dimming
+
+// the scenes: each screen with its two shots, wide and close (aim: the point to centre, how much larger), and what
+// carries it out of the last one: the row the film lifted opens into its detail, the detail becomes the result's card
+// (carry: a shared element, moves.js). Every change of scene needs one; film.sh read says which have none.   TODO
+//IF glide punch type deck
+const FULL={l:0,t:0,w:1080};                // the whole phone
+//IF dive
+const FULL=aim(458,520,1.18);               // the screen filling the frame: the phone itself shows only at the end
+//END
+const REVEAL={l:-47,t:-61,w:1174};          // under the promise, a step back
+// a close shot keeps its element whole: a full-width row fits up to 1.25 times, a small detail can go to 2
+const SHOT={sit:aim(458,470,1.25),act:aim(458,600,1.2),btn:aim(458,720,2.2),res:aim(250,470,1.9)};
+const SCENES=[
+//IF open:result
+  {at:0,el:ELS[2],card:2,wide:FULL,close:SHOT.res},
+  {at:REWIND,el:ELS[0],card:0,wide:FULL,close:SHOT.sit,cut:true},   // back to the start: a hard cut on purpose
+//IF open:problem open:closeup
+  {at:0,el:ELS[0],card:0,wide:FULL,close:SHOT.sit},
+//END
+  {at:TB(SC[1]),el:ELS[1],card:1,wide:FULL,close:SHOT.act,via:SHOT.btn,hits:[TAP],carry:{from:ROWS[1],to:DET}},
+  {at:TB(SC[2]),el:ELS[2],card:2,wide:FULL,close:SHOT.res,hits:[ROLLT+.6],carry:{from:DET,to:CARD}},
+];
+const CUT=Cut(LOOK,SCENES,{bar:BAR,prom:TB(PROM),end:TB(LAST)-.3,open:'__OPEN__',aspect:1920/1080,reveal:REVEAL,apply:CAM,push:{w:PH.sw,dir:1},deck:DECK});
+
+// one line per scene, then the promise; rowsW are the line breaks for the 16:9 panel                     TODO the script's lines
+//IF glide punch dive deck
+const L1=BandLine({...LOOK.line,rows:['The hook, fully on screen','at frame 1, with a number.'],rowsW:['The hook,','fully on screen,','with a number.'],size:72,tin:-1,tout:TB(SC[1])-LOOK.lead});
+const L2=BandLine({...LOOK.line,rows:['What the product','does about it.'],rowsW:['What the','product does','about it.'],size:72,tin:TB(SC[1])+LOOK.settle,tout:TB(SC[2])-LOOK.lead});
+const L3=BandLine({...LOOK.line,rows:['The result,','in one number.'],rowsW:['The result,','in one','number.'],size:72,tin:TB(SC[2])+LOOK.settle,tout:TB(PROM)-LOOK.lead});
+// the product and the promise clear in the beat before the end card (keepDot: the full stop stays and flies into the wordmark)
+const L4=BandLine({rows:['The promise line.'],rowsW:['The promise','line.'],size:80,tin:TB(PROM)+.06,tout:TB(LAST)-.3,keepDot:true});
+//IF type
+// each scene opens on its line, large over the veil, for a bar; then the product plays it out. The promise the same way
+const L1=BandLine({...LOOK.line,rows:['The hook,','with a number.'],tin:-1,tout:CUT.lift(0)-LOOK.lead});
+const L2=BandLine({...LOOK.line,rows:['What it','does about it.'],tin:TB(SC[1])-.05,tout:CUT.lift(1)-LOOK.lead});
+const L3=BandLine({...LOOK.line,rows:['The result.'],tin:TB(SC[2])-.05,tout:CUT.lift(2)-LOOK.lead});
+const L4=BandLine({...LOOK.line,rows:['The promise','line.'],tin:TB(PROM)-.05,tout:TB(LAST)-.3,keepDot:true});
+//END
+const LINES=[L1,L2,L3,L4];
+const EC=EndCard({chip:'CHIP',cta:'Your call to action.'});  // TODO the chip (a plan, an audience) and the call to action your rules allow
+let FROM=[540,1400,6];
+
+function render(t){
+  aurora(t,LOOK.glow*(1-.35*inv(TB(LAST),TB(LAST)+.6,t)));
+  const {shot}=CUT.render(t);
+  fade(clamp((1080/shot.w-1.05)/.1));       // a zoomed screen fades out under the kicker and the wordmark
+  const ex=inv(TB(LAST)-.3,TB(LAST)+.02,t);   // the product leaves before the wordmark rises: never a double exposure
+  WORLD.style.transform=`translateY(${170*E.inCubic(ex)}px) scale(${1-.06*E.outCubic(ex)})`;
+  WORLD.style.opacity=1-E.outCubic(ex);
+//IF type
+  wideGlide(1-CUT.cover);                   // 16:9: the phone moves to the middle while no line is up
+//END
+  KICK.render(t,1-ex);
+  // 1 the Lift: the row the film is about rises toward camera, the rest dims
+  const lf=E.inOutCubic(inv(LIFT,LIFT+.5,t));DIM.style.opacity=.6*lf;
+  ROWS[1].style.transform=`scale(${1+.04*lf})`;ROWS[1].style.boxShadow=`inset 0 0 0 2px #E2E5E9,0 ${24*lf}px ${60*lf}px rgba(0,0,0,${.3*lf})`;
+  // then a pin says why it matters, gone before the scene changes
+  PIN1.render(WHY_ON?t-WHY:-1,inv(TB(SC[1])-.6,TB(SC[1])-.3,t));vis(PIN1.chip,WHY_ON&&t>=WHY&&t<TB(SC[1])-.25);
+  // 2 the tap on the button, the status flips half a beat later, the app says what changed
+  TAPS.render(t);WAIT.style.opacity=t<FLIP?1:0;DONE.style.opacity=t<FLIP?0:1;
+  const sp=tw(t,SAIDT,.5);SAID.style.opacity=sp;SAID.style.transform=`translateY(${(1-sp)*24}px)`;
+  // 3 the number rolls to its value (already there while the result opens the film, until its screen has gone),
+  // the pin lands after it
+  ROLL.odometer(550,600,REWIND&&t<REWIND+.7?1:E.outCubic(inv(ROLLT,ROLLT+.6,t)));
+  PIN.render(t-PINT,inv(TB(PROM),TB(PROM)+.3,t));vis(PIN.chip,t>=PINT&&t<TB(PROM)+.35);
+  LINES.forEach(L=>L.render(t));
+  if(L4.stop)L4.stop.style.opacity=t<TB(LAST)?1:0;
+  EC.render(t-TB(LAST),FROM,B);
+}
+boot(DUR,render,()=>{LINES.forEach(L=>L.fit());render(TB(LAST)-.05);const s=L4.stopXY();FROM=[s[0],s[1],Math.max(5,s[2]*.36)];});
+})();
+</script>
+</body>
+</html>

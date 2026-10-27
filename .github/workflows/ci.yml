@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  self-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # Third-party actions are pinned to a full commit SHA.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+
+      - name: Plugin files are valid JSON
+        run: >
+          node -e "for (const f of ['.claude-plugin/plugin.json', '.claude-plugin/marketplace.json'])
+          JSON.parse(require('fs').readFileSync(f, 'utf8'))"
+
+      - name: No marker left before publishing
+        run: bash scripts/check-publish-ready.sh
+
+      - name: Engine packages
+        working-directory: skills/oneshot/engine
+        run: npm ci --no-audit --no-fund
+
+      - name: Chromium's system libraries
+        working-directory: skills/oneshot/engine
+        run: npx playwright install-deps chromium
+
+      - name: Set up and self-test
+        run: bash skills/oneshot/engine/setup.sh

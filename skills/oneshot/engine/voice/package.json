@@ -1,0 +1,9 @@
+{
+  "name": "oneshot-voice",
+  "private": true,
+  "type": "commonjs",
+  "description": "The narrator for films with a voice: Kokoro, a small open text-to-speech model, run on the CPU. Installed by setup.sh --voice",
+  "dependencies": {
+    "kokoro-js": "1.2.1"
+  }
+}

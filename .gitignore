@@ -1,0 +1,6 @@
+# Installed by skills/oneshot/engine/setup.sh (engine/node_modules, engine/voice/node_modules)
+node_modules/
+# A film project made while trying the skill inside this repository
+oneshot-output/
+motion-clip-output/
+.DS_Store

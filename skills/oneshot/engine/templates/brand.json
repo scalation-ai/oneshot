@@ -1,0 +1,21 @@
+{
+ "name": "yourbrand",
+ "wordmark": "yourbrand",
+ "wordmarkSpacing": "-.04em",
+ "colors": {
+  "accent": "#3E63DD",
+  "ink": "#16181F",
+  "body": "#3A3D46",
+  "muted": "#6B7280",
+  "border": "#E2E5E9",
+  "surface": "#F8F9FB",
+  "night": "#0B0E14",
+  "green": "#16A34A",
+  "amber": "#B26A00",
+  "red": "#DC2626"
+ },
+ "fonts": {
+  "head": {"family": "Space Grotesk", "file": "SpaceGrotesk.ttf", "weight": "300 700"},
+  "body": {"family": "DM Sans", "file": "DMSans.ttf", "weight": "100 1000"}
+ }
+}

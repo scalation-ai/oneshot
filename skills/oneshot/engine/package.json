@@ -1,0 +1,11 @@
+{
+  "name": "oneshot-engine",
+  "private": true,
+  "type": "commonjs",
+  "description": "Renders product films frame by frame from their HTML timelines, with their scores",
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "playwright": "1.60.0",
+    "pngjs": "^7.0.0"
+  }
+}

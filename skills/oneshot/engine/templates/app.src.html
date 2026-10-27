@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__ID__</title>
+<!--FONTS-->
+<style>/*CSS*/</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+(function(){
+"use strict";
+const FILM_FORMAT='desktop';                     // 16:9 only: a native desktop app, on its computer's screen
+//INCLUDE lib.js
+//INCLUDE desk.js
+//INCLUDE moves.js
+//INCLUDE edit.js
+/* =====================================================================
+   __ID__, a 16:9 film of a native desktop app.  __SECS__ s, __BPM__ BPM, __BARS__ bars.
+   Style __STYLE__, opening __OPEN__, mood __MOOD__: picked by film.sh new (references/styles.md).
+   The computer's screen in a card on the left, the camera framing the part of it each scene is about, so the
+   app's panels read large; the lines on the right. Everything on the screen is in screen points (1440 x 900).
+   Three scenes (the situation, the action, the result), the promise, the end card. Start from the film's
+   script; replace every line marked TODO. Numbers only from the story file.
+   ===================================================================== */
+const BPM=112,B=60/BPM,BAR=4*B,DUR=7*BAR,TB=n=>n*BAR;
+const LAST=Math.round(DUR/BAR)-1,PROM=LAST-1;          // the end card's bar and the promise line's bar, whatever the length
+const SC=[0,Math.round(PROM*.36),Math.round(PROM*.68)]; // the bar each scene starts on                       TODO from the script
+const LOOK=Look('__STYLE__');
+
+const KICK=Kicker('Feature name');                                                        // TODO
+const S=ScreenCard(LW);
+const MB=MenuBar(S,{app:'Your App',menus:['File','Edit','View','Window','Help'],time:'Tue 9:41 AM'});   // TODO the app's own name and menus
+LW.style.transformOrigin='620px 540px';
+
+// TODO rebuild the real window in Wn.app (window points), pixel-matched to a capture of it (film.sh capture)
+const Wn=AppWindow(S,{x:40,y:84,w:820,h:600,title:'Your App'});
+const side=box(el('div','a',Wn.app),0,0,220,600-Wn.bar);css(side,'background:#F2F2F5;box-shadow:inset -1px 0 0 rgba(0,0,0,.06)');
+['Inbox','Today','Done'].forEach((s,i)=>css(box(el('div','a',side,s),14,16+i*34,192,28),`border-radius:7px;padding-left:12px;line-height:28px;font-size:14px;font-weight:${i?500:600};${i?'':'background:rgba(0,0,0,.07)'}`));
+// 3 the result: the count at the top of the list moves
+css(box(el('div','a',Wn.app,'DONE TODAY'),248,20),'font-size:11px;font-weight:700;letter-spacing:.06em;color:#8A8A8E');
+const cnt=box(el('div','a',Wn.app),248,36);css(cnt,'display:flex;font-weight:700;color:#1D1D1F');
+const ROLL=Roller(cnt,{digits:2,size:30,color:'#1D1D1F'});cnt.firstChild.style.fontFamily=SYS;
+// 1 the situation: the list, and the one thing the film is about
+const ROWS=['The first thing','The second thing','The third thing'].map((s,i)=>{
+  const r=box(el('div','a',Wn.app),248,86+i*66,540,54);css(r,'border-radius:10px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.09)');
+  const ck=box(el('div','a',r),18,17,20,20);css(ck,'border-radius:50%;box-shadow:inset 0 0 0 1.5px #B0B0B5');
+  const tx=css(box(el('div','a',r,s),50,0),'line-height:54px;font-size:15px;font-weight:500');return {r,ck,tx};});
+// 2 the action: the app's notice arrives at the top right of the screen, with the button the user clicks
+const NOTE=box(el('div','a',S.scr),S.sw-376,40,360,96);
+css(NOTE,'z-index:30;border-radius:16px;background:rgba(250,250,252,.97);box-shadow:0 14px 40px rgba(0,0,0,.25),0 0 0 .5px rgba(0,0,0,.16);padding:14px 18px;font-size:14px;line-height:1.35;color:#1D1D1F');
+NOTE.innerHTML='<b style="display:block">Your App</b>What happened, in the app\'s own words';
+const NB=box(el('div','a',NOTE,'Done'),272,56,70,26);
+css(NB,`border-radius:13px;background:${C.accent};color:#fff;text-align:center;line-height:26px;font-size:13px;font-weight:600`);
+const ND=box(el('div','a',NOTE,'Marked done'),222,56,120,26);css(ND,`text-align:right;line-height:26px;font-size:13px;font-weight:600;color:${C.accent}`);
+
+// the beats: the thing is picked out, the notice arrives and is clicked, the thing is done and the count moves   TODO
+//IF open:result
+const REWIND=TB(1);                         // the result first, for one bar; then the story from its start
+//IF open:problem open:closeup
+const REWIND=0;
+//END
+const SHOWN=b=>TB(b)+(LOOK.name==='type'?BAR:0);      // when a scene is in full view (type: once the veil has gone)
+const LIFT=SHOWN(0)+REWIND+B,NOTET=SHOWN(SC[1])+.2,TAP=SHOWN(SC[1])+2*B,FLIP=TAP+B/2,ROLLT=SHOWN(SC[2])+2*B;
+const TAPS=Tap(S.scr,{x:S.sw-376+307,y:40+69,at:TAP,kind:'pointer',size:16});
+
+// the shots: the rectangle of the screen each scene is about ({l,t,w}, w points wide, the screen's shape). The card is
+// 1080 px wide, so a shot w points wide draws the screen at 1080/w: 13 to 15 point text needs w of 900 or less to
+// reach 16 px, and the words a viewer must read want w of 600 or less                                       TODO
+const aim=(x,y,w)=>({l:clamp(x-w/2,0,S.sw-w),t:clamp(y-w*S.sh/S.sw/2,0,S.sh-w*S.sh/S.sw),w});
+const SHOT={win:{l:0,t:0,w:880},rows:aim(560,200,560),note:{l:S.sw-560,t:0,w:560},noteC:aim(S.sw-196,100,420),
+  btn:aim(S.sw-376+307,109,200),res:aim(520,180,560)};
+const REVEAL={l:0,t:0,w:960};
+const SCENES=[
+//IF open:result
+  {at:0,wide:SHOT.win,close:SHOT.res},
+  {at:REWIND,wide:SHOT.win,close:SHOT.rows,cut:true},   // back to the start: a hard cut on purpose
+//IF open:problem open:closeup
+  {at:0,wide:SHOT.win,close:SHOT.rows},
+//END
+  {at:TB(SC[1]),wide:SHOT.note,close:SHOT.noteC,via:SHOT.btn,hits:[TAP]},
+  {at:TB(SC[2]),wide:SHOT.win,close:SHOT.res,hits:[ROLLT+.6]},
+];
+const CUT=Cut(LOOK,SCENES,{bar:BAR,prom:TB(PROM),end:TB(LAST)-.3,open:'__OPEN__',aspect:S.sh/S.sw,reveal:REVEAL,apply:sh=>S.view(sh.l,sh.t,sh.w)});
+
+// one line per scene, then the promise, in the panel on the right                                          TODO the script's lines
+//IF glide punch dive
+const L1=BandLine({...LOOK.line,rows:['The hook,','with one','number.'],sizeW:104,cyW:540,tin:-1,tout:TB(SC[1])-LOOK.lead});
+const L2=BandLine({...LOOK.line,rows:['What the','app just','did.'],sizeW:104,cyW:540,tin:TB(SC[1])+LOOK.settle,tout:TB(SC[2])-LOOK.lead});
+const L3=BandLine({...LOOK.line,rows:['The result,','in one','number.'],sizeW:104,cyW:540,tin:TB(SC[2])+LOOK.settle,tout:TB(PROM)-LOOK.lead});
+// the product and the promise clear in the beat before the end card (keepDot: the full stop stays and flies into the wordmark)
+const L4=BandLine({rows:['The promise','line.'],sizeW:104,cyW:540,tin:TB(PROM)+.06,tout:TB(LAST)-.3,keepDot:true});
+//IF type
+// each scene opens on its line, large over the veil, for a bar; then the product plays it out. The promise the same way
+const L1=BandLine({...LOOK.line,rows:['The hook, with','one number.'],tin:-1,tout:CUT.lift(0)-LOOK.lead});
+const L2=BandLine({...LOOK.line,rows:['What the','app just did.'],tin:TB(SC[1])-.05,tout:CUT.lift(1)-LOOK.lead});
+const L3=BandLine({...LOOK.line,rows:['The result.'],tin:TB(SC[2])-.05,tout:CUT.lift(2)-LOOK.lead});
+const L4=BandLine({...LOOK.line,rows:['The promise line.'],tin:TB(PROM)-.05,tout:TB(LAST)-.3,keepDot:true});
+//END
+const LINES=[L1,L2,L3,L4];
+const EC=EndCard({chip:'CHIP',cta:'Your call to action.'});        // TODO the chip and the call to action your rules allow
+let FROM=[1400,540,6];
+
+function render(t){
+  aurora(t,LOOK.glow*(1-.35*inv(TB(LAST),TB(LAST)+.6,t)));
+  CUT.render(t);
+  const ex=inv(TB(LAST)-.3,TB(LAST)+.02,t);   // gone before the wordmark rises: never a double exposure
+  const mid=LOOK.name==='type'&&WIDE?336*(1-CUT.cover):0;   // type, 16:9: the card moves to the middle while no line is up
+  LW.style.transform=`translate(${mid}px,${120*E.inCubic(ex)}px) scale(${1-.05*E.outCubic(ex)})`;LW.style.opacity=1-E.outCubic(ex);
+  KICK.render(t,1-ex);
+  const done=REWIND&&t<REWIND+.7||t>=FLIP;            // the result opening shows the end state until its shot has gone
+  // 1 the thing the film is about is picked out
+  const pick=t>=LIFT&&!(t>=FLIP);ROWS[0].r.style.boxShadow=pick?`0 0 0 2px ${C.accent}`:'0 0 0 1px rgba(0,0,0,.09)';
+  // 2 the notice slides in from the screen's edge and is clicked: it says the thing is done, and leaves with the scene
+  const np=tw(t,NOTET,.6,'outExpo'),nq=E.inCubic(inv(TB(SC[2])-.35,TB(SC[2]),t));
+  NOTE.style.transform=`translateX(${(1-np)*400+nq*400}px)`;NOTE.style.visibility=t>=NOTET&&nq<1&&!(t<REWIND+.7&&REWIND)?'':'hidden';
+  NB.style.opacity=t<FLIP?1:0;ND.style.opacity=t<FLIP?0:1;
+  TAPS.render(t);
+  ROWS[0].ck.style.background=done?C.accent:'transparent';ROWS[0].ck.style.boxShadow=done?'none':'inset 0 0 0 1.5px #B0B0B5';
+  ROWS[0].tx.style.color=done?'#8A8A8E':'#1D1D1F';ROWS[0].tx.style.textDecoration=done?'line-through':'none';
+  // 3 the count rolls on by one when the result is in view
+  ROLL.odometer(11,12,REWIND&&t<REWIND+.7?1:E.outCubic(inv(ROLLT,ROLLT+.6,t)));
+  LINES.forEach(L=>L.render(t));
+  if(L4.stop)L4.stop.style.opacity=t<TB(LAST)?1:0;
+  EC.render(t-TB(LAST),FROM,B);
+}
+boot(DUR,render,()=>{LINES.forEach(L=>L.fit());render(TB(LAST)-.05);const s=L4.stopXY();FROM=[s[0],s[1],Math.max(5,s[2]*.36)];});
+})();
+</script>
+</body>
+</html>

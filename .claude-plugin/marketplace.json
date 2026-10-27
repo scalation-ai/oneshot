@@ -1,0 +1,15 @@
+{
+  "name": "oneshot",
+  "description": "Short product films from a product's real screens, rendered from code.",
+  "owner": {
+    "name": "Scalation",
+    "url": "https://scalation.ai"
+  },
+  "plugins": [
+    {
+      "name": "oneshot",
+      "source": "./",
+      "description": "Make short product films from a product's real screens, rendered from code, where every scene grows out of the last instead of replacing it."
+    }
+  ]
+}
