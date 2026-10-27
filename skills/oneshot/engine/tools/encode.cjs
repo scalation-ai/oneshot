@@ -47,6 +47,10 @@ const LIN = new Float32Array(256); for (let v = 0; v < 256; v++) { const u = v /
 const SRGB = new Uint8Array(4097); for (let i = 0; i <= 4096; i++) { const l = i / 4096; SRGB[i] = Math.round(255 * (l <= 0.0031308 ? 12.92 * l : 1.055 * Math.pow(l, 1 / 2.4) - 0.055)); }
 const acc = new Float32Array(FB);
 const write = buf => new Promise(res => enc.stdin.write(buf) ? res() : enc.stdin.once('drain', res));
+// a line every tenth of the frames, with the time left at the pace so far
+const t0 = Date.now(), step = Math.max(1, Math.ceil(counts.length / 10));
+const tell = f => { if (f % step || f === counts.length) return; const s = (Date.now() - t0) / 1000;
+  console.log(`  encoded ${Math.round(f / counts.length * 100)}%, ${s.toFixed(0)}s, about ${(s / f * (counts.length - f)).toFixed(0)}s left`); };
 
 (async () => {
   // one capture at a time, filled into one buffer as ffmpeg's chunks arrive
@@ -62,7 +66,7 @@ const write = buf => new Promise(res => enc.stdin.write(buf) ? res() : enc.stdin
   for await (const chunk of dec.stdout) {
     let at = 0;
     while (at < chunk.length) { const m = Math.min(FB - fill, chunk.length - at); chunk.copy(img, fill, at, at + m); fill += m; at += m;
-      if (fill === FB) { fill = 0; if (frame < counts.length) await take(); } }
+      if (fill === FB) { fill = 0; if (frame < counts.length) { const was = frame; await take(); if (frame > was) tell(frame); } } }
   }
   enc.stdin.end();
   const [dc, ec] = await Promise.all([new Promise(r => dec.on('close', r)), new Promise(r => enc.on('close', r))]);

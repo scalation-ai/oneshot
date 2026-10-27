@@ -300,6 +300,9 @@ y 1000. `read` measures both on the real frames.
    (`references/review.md`). Verify every finding on a full-size frame before fixing it.
 5. `poster` and `preview`. The user watches. `final` only after their yes: it gives every moving frame as
    many motion-blur captures as its speed needs (up to 16), one to a still frame, and never blurs across a cut.
+   Before starting it, tell the user how long it will take: about twice the preview's time (the self-test's
+   15 s film took 4 minutes for the preview and 7 for the final), more for a film that moves most of the time.
+   Both print a line every tenth of the way with the time left.
 
 ## References
 

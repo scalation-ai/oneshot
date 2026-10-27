@@ -33,7 +33,8 @@
 #             renders/. A preview without the shutter strobes on every fast move and is judged on that
 #   quick     1x, one capture a frame, no motion blur: a fast look for yourself, never what the user is shown
 #   final     2x supersampled with motion blur sized per frame (1 capture on a hold, up to 16 on the fastest move,
-#             never across a cut); only once the preview is approved
+#             never across a cut); only once the preview is approved. About twice the preview's time. quick, preview
+#             and final print a line every tenth of the way with the time left (WORKERS=n: browsers at once, 4 by default)
 #   gif       a looping GIF of the final (or the preview, rendered first if there is none), no sound (GIFW, GIFFPS)
 # The format defaults to the film's first: phone (9x16), wide (16x9), square (1x1), 4x5, or all of the film's in turn.
 set -e
@@ -139,8 +140,10 @@ case $CMD in
     # motion needs, and encode.cjs blends each frame's own (frames.json)
     case $CMD in final) DSF=2; K=16; SS=2;; preview) DSF=1; K=8; SS=1;; *) DSF=1; K=1; SS=1;; esac
     rm -rf "$WORK/raw"
-    node "$T_/render.cjs" "$HTML" "$WORK/raw" $DSF $K 4 0 $FR $W $H "$Q" > "$WORK/render.log" 2>&1 || { echo "The renderer stopped: see $WORK/render.log"; tail -3 "$WORK/render.log"; exit 1; }
-    tail -1 "$WORK/render.log"
+    # its progress shows as it goes (a line every tenth, with the time left) and is kept in render.log. Four browsers
+    # capture at once (WORKERS=n for another count): eight were no faster on a busy 10-core Mac
+    node "$T_/render.cjs" "$HTML" "$WORK/raw" $DSF $K "${WORKERS:-4}" 0 $FR $W $H "$Q" 2>&1 | tee "$WORK/render.log"
+    [ "${PIPESTATUS[0]}" = 0 ] || { echo "The renderer stopped: see $WORK/render.log"; exit 1; }
     [ -f "$WAV" ] || soundtrack
     if [ $CMD = final ]; then TAG=""; elif [ $CMD = preview ]; then TAG=" PREVIEW"; else TAG=" QUICK"; fi
     node "$T_/encode.cjs" "$WORK/raw" $K $SS "$WAV" "$OUTD/$TITLE $FMT$TAG.mp4"
