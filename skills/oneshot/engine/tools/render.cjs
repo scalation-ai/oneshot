@@ -14,7 +14,7 @@ const { chromium } = require('./pw.cjs');
 const path = require('path'), fs = require('fs'), { pathToFileURL } = require('url');
 (async () => {
   const [,, html, sub, dsfS, KS, workersS, f0S, f1S, WS, HS, QS] = process.argv;
-  const dsf = +dsfS, K = +KS, workers = +workersS, f0 = +f0S, f1 = +f1S, W = +WS || 1920, H = +HS || 1080;
+  const dsf = +dsfS, K = +KS, workers = Math.max(1, Math.round(+workersS) || 4), f0 = +f0S, f1 = +f1S, W = +WS || 1920, H = +HS || 1080;
   const FPS = 60, SHUTTER = 0.5, GAP = +process.env.GAP || 6, FIXED = !!process.env.RENDER_FIXED;
   fs.mkdirSync(sub, { recursive: true });
   const JPG = dsf > 1, EXT = JPG ? 'jpg' : 'png';
@@ -24,6 +24,8 @@ const path = require('path'), fs = require('fs'), { pathToFileURL } = require('u
   const frames = []; for (let f = f0; f < f1; f++) frames.push(f);
   const counts = new Array(frames.length).fill(0);
   let next = 0, done = 0, failed = false, captures = 0, holds = 0, cutFrames = 0; const t0 = Date.now();
+  const step = Math.max(1, Math.ceil(frames.length / 10));
+  console.log(`capturing ${frames.length} frames on ${workers} workers`);
   async function worker(id) {
     const b = await chromium.launch({ args: ['--disable-gpu-vsync', '--disable-frame-rate-limit'] }); browsers.push(b);
     const p = await b.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: dsf });
@@ -49,7 +51,10 @@ const path = require('path'), fs = require('fs'), { pathToFileURL } = require('u
       }
       counts[i] = ts.length;
       done++;
-      if (done % 60 === 0) console.log(`${done}/${frames.length} frames, ${((Date.now() - t0) / 1000).toFixed(0)}s`);
+      if (done % step === 0 && done < frames.length) {   // every tenth, with the time left at the pace so far
+        const s = (Date.now() - t0) / 1000;
+        console.log(`  ${Math.round(done / frames.length * 100)}%  ${done}/${frames.length} frames, ${s.toFixed(0)}s, about ${(s / done * (frames.length - done)).toFixed(0)}s left`);
+      }
     }
     if (errs.length) { failed = true; console.log('worker', id, 'page errors:', errs.slice(0, 5).join(' | ')); }
     await p.close();
