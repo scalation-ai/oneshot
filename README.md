@@ -35,6 +35,19 @@ npx skills add scalation-ai/oneshot
 Then ask your agent for a film of your product, or run `/oneshot`. The first run sets the engine
 up and renders a short test film to check it works.
 
+### Update
+
+Claude Code does not update plugins from this marketplace on its own. To get a new version, run:
+
+```
+claude plugin marketplace update oneshot
+claude plugin update oneshot@oneshot
+```
+
+Or open `/plugin`, choose oneshot on the **Installed** tab, then **Update now**. Run `/reload-plugins`
+or start a new session to use it. To update automatically instead, open `/plugin`, choose oneshot on
+the **Marketplaces** tab, then **Enable auto-update**.
+
 ## Requirements
 
 - Node.js 18 or newer, on macOS or Linux.

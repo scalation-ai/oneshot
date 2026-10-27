@@ -64,7 +64,8 @@ folder, `films/`, or the engine's own `fonts/` (Space Grotesk and DM Sans, both 
 Licence). A film embeds its fonts, so it plays anywhere. Use two faces at most; no italics. A brand
 that draws its name in a third face adds `"wordmark": {"family", "file", "weight"}` under `fonts`:
 it is used for the wordmark alone (top right and the end card). Check each font's licence allows
-embedding; keep its licence file next to it.
+embedding; keep its licence file next to it. A face must draw every character the films show: a name
+in Thai or Japanese, an accented name, a ✓. `film.sh <id> check` names any it lacks.
 
 **The interface's face** is the product's own, whatever the brand's two are: rebuilt screens use it.
 A web app's face is a file like any other. A native app often uses the system's face (SF Pro on a

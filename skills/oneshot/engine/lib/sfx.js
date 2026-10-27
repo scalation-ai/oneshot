@@ -220,6 +220,30 @@ function fftconvolve(x, h, keep) {
 }
 const roundEven = x => { const r = Math.round(x); return (Math.abs(x - Math.trunc(x)) === 0.5 && r % 2 !== 0) ? r - 1 : r; };   // Python's round()
 
+// ---------------------------------------------------------------- loudness, as the platforms measure it
+// loudness([L, R]) at 48 kHz: { lufs, tp }. lufs is BS.1770's integrated loudness: each channel through the K filter (a
+// shelf up 4 dB over 1.5 kHz, a high-pass at 38 Hz), the power in 400 ms blocks every 100 ms, blocks under -70 LUFS
+// dropped, then blocks more than 10 LU under the rest's mean. tp is the true peak in dBTP: the samples and three
+// points between each pair (a windowed sinc, 4x), so a peak a player's or an encoder's resampler draws between two
+// samples is caught. A mix peaking at -1 dBFS can reach over 0 dBTP that way, and clip once it is AAC.
+const KSHELF = [[1.53512485958697, -2.69169618940638, 1.19839281085285], [1, -1.69065929318241, 0.73248077421585]];
+const KHP = [[1, -2, 1], [1, -1.99004745483398, 0.99007225036621]];
+let TPK = null;   // the three in-between phases, made on first use (sinc is defined further down)
+const tpk = () => TPK || (TPK = [1, 2, 3].map(p => { const u = p / 4, h = []; for (let k = -15; k <= 16; k++) { const d = k - u; h.push(sinc(d) * (0.5 + 0.5 * Math.cos(Math.PI * d / 16.5))); } return h; }));
+function loudness(chs) {
+  const n = chs[0].length, blk = Math.round(0.4 * SR), hop = Math.round(0.1 * SR), pw = [];
+  const sq = chs.map(x => sosfilt([KSHELF, KHP], x).map(v => v * v));
+  for (let s = 0; s + blk <= n; s += hop) { let e = 0; for (const y of sq) { let a = 0; for (let i = s; i < s + blk; i++) a += y[i]; e += a / blk; } pw.push(e); }
+  const L = p => -0.691 + 10 * Math.log10(p), mean = a => a.reduce((s, v) => s + v, 0) / a.length;
+  const abs = pw.filter(p => L(p) > -70), rel = abs.length ? L(mean(abs)) - 10 : -70, kept = abs.filter(p => L(p) > rel);
+  let pk = 0; for (const x of chs) for (let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(x[i]));
+  // between samples a peak rises a few dB at most over its neighbours: only the stretches within 6 dB of the top are drawn
+  const top = pk / 2;
+  for (const x of chs) for (let i = 0; i < n - 1; i++) if (Math.abs(x[i]) > top || Math.abs(x[i + 1]) > top)
+    for (const h of tpk()) { let s = 0; for (let k = 0; k < 32; k++) { const j = i - 15 + k; if (j >= 0 && j < n) s += x[j] * h[k]; } pk = Math.max(pk, Math.abs(s)); }
+  return { lufs: kept.length ? L(mean(kept)) : -Infinity, tp: 20 * Math.log10(pk || 1e-9) };
+}
+
 class Mix {
   constructor(dur) { this.N = roundEven(dur * SR); this.dur = dur; this.L = zeros(this.N); this.R = zeros(this.N); this.RL = zeros(this.N); this.RR = zeros(this.N); this.duck = new Float64Array(this.N).fill(1); }
   // place a sound at t seconds: gain, pan -1 (left) to 1 (right), rev the reverb send 0 to 1
@@ -242,7 +266,10 @@ class Mix {
   pump(t, depth = 0.4, tau = 0.09) { const i0 = roundEven(t * SR); if (i0 >= this.N) return;
     if (this.bus === 'bed' && this.gates && this.gates.some(([g0, g1]) => t >= g0 - 0.03 && t < g1)) return;   // no breathing in a break
     for (let k = i0; k < this.N; k++) this.duck[k] = Math.min(this.duck[k], 1 - depth * Math.exp(-((k - i0) / SR) / tau)); }
-  write(out, { ir_d = 2.2, wet = 0.9 } = {}) {
+  // the master: the mix's peaks at -1 dBFS, then down until its true peak is under -1.5 dBTP, so the AAC in the film stays
+  // under -1 (the encoder adds up to about 0.2 dB). lufs: a loudness to bring it down to (-14, the platforms'), never up:
+  // a series sets the same on every film so none plays louder than the rest
+  write(out, { ir_d = 2.2, wet = 0.9, lufs = null } = {}) {
     const r = rngOf(3), n = N_(ir_d), pre = N_(0.02), N = this.N;
     const ir = () => { const x = map(n, t => r.normal() * Math.exp(-t / 0.5)), y = zeros(pre + n); y.set(lp(x, 6000), pre); let s = 0; for (const v of y) s += v * v; s = Math.sqrt(s); return y.map(v => v / s); };
     const irl = ir(), irr = ir();
@@ -278,15 +305,18 @@ class Mix {
       for (let i = 0; i < N; i++) { mL[i] = sat(uL[i], i) + vt[i] * gv; mR[i] = sat(uR[i], i) + vt[i] * gv; }
       level = `  voice ${V.over} dB over the music under it`;
     } else for (let i = 0; i < N; i++) { mL[i] = sat(mL[i], i); mR[i] = sat(mR[i], i); }
-    pk = peak(); let ss = 0;
-    for (let i = 0; i < N; i++) { mL[i] *= 0.89 / pk; mR[i] *= 0.89 / pk; ss += (mL[i] * mL[i] + mR[i] * mR[i]) / 2; }
+    pk = peak(); const ld = loudness([mL, mR].map(x => x.map(v => v * 0.89 / pk)));
+    let g = Math.min(1, Math.pow(10, (-1.5 - ld.tp) / 20)); if (lufs !== null) g = Math.min(g, Math.pow(10, (lufs - ld.lufs) / 20));
+    let ss = 0; const k = 0.89 / pk * g, gdb = 20 * Math.log10(g);
+    for (let i = 0; i < N; i++) { mL[i] *= k; mR[i] *= k; ss += (mL[i] * mL[i] + mR[i] * mR[i]) / 2; }
     const buf = Buffer.alloc(44 + N * 4);
     buf.write('RIFF', 0); buf.writeUInt32LE(36 + N * 4, 4); buf.write('WAVEfmt ', 8); buf.writeUInt32LE(16, 16); buf.writeUInt16LE(1, 20); buf.writeUInt16LE(2, 22);
     buf.writeUInt32LE(SR, 24); buf.writeUInt32LE(SR * 4, 28); buf.writeUInt16LE(4, 32); buf.writeUInt16LE(16, 34); buf.write('data', 36); buf.writeUInt32LE(N * 4, 40);
     for (let i = 0; i < N; i++) { buf.writeInt16LE(Math.trunc(Math.max(-1, Math.min(1, mL[i])) * 32767), 44 + i * 4); buf.writeInt16LE(Math.trunc(Math.max(-1, Math.min(1, mR[i])) * 32767), 46 + i * 4); }
     fs.writeFileSync(out, buf);
     const pk2 = peak(), rms = Math.sqrt(ss / N);
-    console.log('wrote', out, +(N / SR).toFixed(3), 's  peak dBFS', +(20 * Math.log10(pk2)).toFixed(2), ' rms dBFS', +(20 * Math.log10(rms)).toFixed(2) + level);
+    console.log('wrote', out, +(N / SR).toFixed(3), 's  peak dBFS', +(20 * Math.log10(pk2)).toFixed(2), ' rms dBFS', +(20 * Math.log10(rms)).toFixed(2),
+      ' LUFS', +(ld.lufs + gdb).toFixed(1), ' true peak dBTP', +(ld.tp + gdb).toFixed(2) + level);
   }
 }
 
@@ -371,6 +401,28 @@ function layBed(M, mood, { bpm, bars, key = 0, variant = 0, from = 0 } = {}) {
     }
   }
   M.add(pad_chord(CLOSE[mood].map(F), BAR, { cutoff: 2600, att: 0.08, rel: 0.5 }), TB(last), 0.34, { rev: 0.5 });
+}
+
+// track(M, file, { at, from, until, gain, fadeIn, fadeOut, breaks }) lays a piece of music the user supplied (wav, mp3, m4a:
+// anything ffmpeg reads) in place of bed(): from `from` seconds into the file, placed at `at` on the film, cut at `until`
+// (the film's end) with a fade out over `fadeOut` seconds. It is laid on the groove's bus, so a voice ducks it as deep as
+// a groove and `breaks` stop it dead the same way. Its loudness is set to a groove's (-16 LUFS; drive's is -14, calm's -19)
+// before `gain`: 1 keeps it there, under the film's events as bed() is. Only a file the user gave and may use: never
+// fetch one.
+function track(M, file, { at = 0, from = 0, until = M.dur, gain = 1, fadeIn = 0.02, fadeOut = 1.5, breaks = null } = {}) {
+  const dir = require.main ? path.dirname(require.main.filename) : process.cwd(), f = path.resolve(dir, file);
+  if (!fs.existsSync(f)) throw new Error(`track: no file '${file}' (a path from the score's folder)`);
+  let FF = process.env.FFMPEG; if (!FF) try { FF = require(path.join(__dirname, '..', 'node_modules', 'ffmpeg-static')); } catch (e) {}
+  if (!FF || !fs.existsSync(FF)) throw new Error('track: ffmpeg not found. Run the engine setup once: bash setup.sh');
+  const d = Math.max(0, until - at), raw = require('child_process').execFileSync(FF, ['-v', 'error', '-ss', String(from), '-t', String(d), '-i', f,
+    '-ac', '2', '-ar', String(SR), '-f', 'f32le', '-'], { maxBuffer: 1 << 30 });
+  const x = new Float32Array(raw.buffer, raw.byteOffset, raw.length / 4), n = x.length >> 1;
+  if (!n) throw new Error(`track: nothing to play in '${file}' from ${from} s`);
+  const L = zeros(n), R = zeros(n), fi = Math.max(1, N_(fadeIn)), fo = Math.max(1, N_(Math.min(fadeOut, n / SR)));
+  for (let i = 0; i < n; i++) { const e = Math.min(1, i / fi, (n - i) / fo); L[i] = x[2 * i] * e; R[i] = x[2 * i + 1] * e; }
+  const k = gain * Math.pow(10, (-16 - loudness([L, R]).lufs) / 20) / 1.4142;   // add() at a full pan gives 1.4142
+  M.bus = 'bed'; M.gates = breaks;
+  try { M.add(L, at, k, { pan: -1 }); M.add(R, at, k, { pan: 1 }); } finally { M.bus = null; M.gates = null; }
 }
 
 // cue(M, kind, t, gain): the sound of a change of scene at t, the edit style's own, from the recorded sounds. push (glide):
@@ -473,5 +525,5 @@ function voiceClip(file) {
 module.exports = { SR, tvec, noise, map, mul, mix, phaseOf, linspace, bp, hp, lp, hz, saw, env_adsr, rngOf,
   kick, clap, hat, shaker, crash, sub_boom, whoosh, riser, reverse_swell, blip, tick, pop, bell, thock, glide, sonar, thud, marimba,
   clack, key, buzz, odometer, pad_chord, bass_note, sub_note, fftconvolve, Mix, sonic_logo, bed, cue, tr, voice, readWav, resample,
-  sample, sounds, typing,
+  sample, sounds, typing, loudness, track,
   _reseed: s => { rng = rngOf(s); } };

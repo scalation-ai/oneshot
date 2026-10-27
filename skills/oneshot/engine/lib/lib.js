@@ -108,7 +108,13 @@ function LogoParts(parent,theme){const L=BRAND.logoSvg;if(!L)return null;const t
     let g=groups.get(id);if(!g){g=document.createElementNS(NS,'g');u.parentNode.insertBefore(g,u);groups.set(id,g);g.style.transformBox='fill-box';g.style.transformOrigin='50% 50%';}
     g.appendChild(u);}
   return {svg,parts:[...groups.values()]};}
-function letters(e,text){e.textContent='';const out=[];for(const ch of text){const m=el('span','lm',e);const c=el('span','lc',m);c.textContent=ch===' '?' ':ch;out.push(c);}return out;}
+// one span a letter as the reader sees it: a letter with its marks (Thai vowels and tones, accents) stays one span, or
+// each mark is drawn alone on a dotted circle
+const SEG=typeof Intl!=='undefined'&&Intl.Segmenter?new Intl.Segmenter():null;
+const graphemes=s=>SEG?Array.from(SEG.segment(s),g=>g.segment):Array.from(s);
+// a line with marks over its letters (Thai, Vietnamese, Devanagari) gets room above each, mask and letter alike, so a
+// stacked tone mark is not cut off and the letter still leaves the mask whole, and taller rows, so it clears the row above
+function letters(e,text){e.textContent='';const out=[],gs=graphemes(text),tall=gs.some(g=>/\p{Mn}/u.test(g));if(tall)e.style.lineHeight=1.45;for(const ch of gs){const m=el('span',tall?'lm tall':'lm',e);const c=el('span','lc',m);c.textContent=ch===' '?' ':ch;out.push(c);}return out;}
 function rise(sp,u,st,stag,dur,ease){sp.forEach((s,i)=>{const p=E[ease||'outExpo'](inv(st+i*stag,st+i*stag+dur,u));s.style.transform=`translateY(${(1-p)*108}%)`;});}
 function sink(sp,u,st,stag,dur,ease){sp.forEach((s,i)=>{const p=E[ease||'inCubic'](inv(st+i*stag,st+i*stag+dur,u));if(p>0)s.style.transform=`translateY(${-p*108}%)`;});}
 function vis(e,on){e.style.visibility=on?'visible':'hidden';}

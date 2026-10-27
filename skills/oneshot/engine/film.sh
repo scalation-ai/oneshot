@@ -15,9 +15,13 @@
 #   ref       film.sh ref <video>   a reference film in numbers (cuts, shot lengths, bursts, stillness, energy) into
 #             reference/<video name>/ref.html, before a script is written against its feel
 #   studio    open studio.html: every film of the project, both formats, with sound, scrubbable
+#   gallery   every move of the library and every edit style and opening, live and as contact sheets with their speed,
+#             to pick by looking: into renders/gallery/ in the project's brand (without a project, the engine's own
+#             gallery/ folder, in its defaults); open its index.html
 #   and per film, film.sh <film> <command> [format]:
 #   build     inline the brand, fonts and library into films/<film>.html (every command does this first)
-#   check     page errors, the engine's warnings, and whether render(t) is pure (frames out of order match)
+#   check     page errors, the engine's warnings, whether render(t) is pure (frames out of order match), and every
+#             character the film's fonts cannot draw (drawn in a system font instead)
 #   read      the film in numbers before anyone watches it: what carries each change of scene (or nothing does), the
 #             rhythm and the rests, speed, cross-fades, legibility, the feed's safe zone, framing; into
 #             renders/<film>-<format>/read.html (STRICT=1: exit 1 when a leg fails)
@@ -28,9 +32,12 @@
 #   voice     a film with a voice: speak its lines (films/voice/), time each where its words appear, say which run long
 #   audio     write the soundtrack from its score (films/<film>.score.cjs), the voice first if the film has one
 #   onsets    the soundtrack's strongest hits against the bar lines (does the sound land on the picture)
-#   listen    the soundtrack in numbers: hits a second, low end, mud, dings (REF=<clip> to compare with a reference)
+#   listen    the soundtrack in numbers: hits a second, low end, mud, dings, loudness against the series' other films
+#             (REF=<clip> to compare with a reference)
 #   preview   the film the user watches: 1x with motion blur (up to 8 captures on a moving frame, one on a hold), into
 #             renders/. A preview without the shutter strobes on every fast move and is judged on that
+#   subs      the film's words as caption files (.srt and .vtt) for a platform's own captions, timed as spoken in a film
+#             with a voice, else as its lines show; preview and final write them next to the MP4
 #   quick     1x, one capture a frame, no motion blur: a fast look for yourself, never what the user is shown
 #   final     2x supersampled with motion blur sized per frame (1 capture on a hold, up to 16 on the fastest move,
 #             never across a cut); only once the preview is approved. About 1.7 times the preview's time. quick, preview
@@ -45,6 +52,8 @@ OLD_DIR=motion-clip-output                             # the same, from before t
 [ -z "$1" ] && { usage; exit 1; }
 command -v node >/dev/null || { echo "Node.js is missing. Install the LTS from https://nodejs.org, then run: bash \"$ENGINE/setup.sh\""; exit 1; }
 [ -d "$ENGINE/node_modules/playwright" ] || { echo "The engine is not set up yet. Run once: bash \"$ENGINE/setup.sh\""; exit 1; }
+# setup.sh keeps a copy of the lock it installed: a different one means the skill was updated since
+cmp -s "$ENGINE/package-lock.json" "$ENGINE/node_modules/.oneshot-setup" || { echo "The skill was updated since the engine was set up. Run once: bash \"$ENGINE/setup.sh\""; exit 1; }
 export NODE_PATH="$ENGINE/lib${NODE_PATH:+:$NODE_PATH}"   # scores load the sound kit: require('sfx')
 json(){ node -e "$1" "${@:2}"; }
 
@@ -70,6 +79,10 @@ if [ "$1" = ref ]; then   # a reference film: into the project's reference/ if t
   V="$(cd "$CALLER" && cd "$(dirname "$2")" 2>/dev/null && pwd)/$(basename "$2")"; [ -f "$V" ] || { echo "'$2' is not a file"; exit 1; }
   N="$(basename "${2%.*}")"; if [ -f "$PROJ/films.json" ]; then O="$PROJ/reference/$N"; else O="$CALLER/$N-ref"; fi
   node "$ENGINE/tools/ref.cjs" "$V" "$O"; exit $?
+fi
+if [ "$1" = gallery ]; then   # in the project's brand when there is a project, else in the engine's defaults
+  if [ -f "$PROJ/films.json" ]; then P="$(cd "$PROJ" && pwd)"; node "$ENGINE/tools/gallery.cjs" "$P/renders/gallery" "$P"
+  else node "$ENGINE/tools/gallery.cjs" "$ENGINE/gallery"; fi; exit $?
 fi
 [ -f "$PROJ/films.json" ] || { echo "No film project here. Set one up with: bash \"$ENGINE/film.sh\" init (it makes ./$OUT_DIR)"; exit 1; }
 PROJ="$(cd "$PROJ" && pwd)"; export MOTION_PROJECT="$PROJ"   # so the commands film.sh runs itself find it too
@@ -134,6 +147,7 @@ case $CMD in
             NOVOICE=1 node "$SCORE" "$WORK/music.wav" >/dev/null; node "$T_/onsets.cjs" "$WORK/music.wav" "$BPM" 16 "$ID.voice.json"; rm -f "$WORK/music.wav"
           else node "$T_/onsets.cjs" "$WAV" "$BPM"; fi;;
   listen) [ -f "$WAV" ] || soundtrack; node "$T_/listen.cjs" "$WAV" ${REF:+"$REF"};;
+  subs) node "$T_/subs.cjs" "$PROJ" "$ID" "$FMT" "$OUTD/$TITLE $FMT";;
   sheet) node "$T_/sheet.cjs" "$HTML" "$WORK/sheet" $DUR 0.125 $W $H "$Q";;
   quick|preview|final)
     # the final's shutter holds up to 16 captures a frame, the preview's 8; render.cjs takes only as many as each frame's
@@ -147,7 +161,8 @@ case $CMD in
     [ -f "$WAV" ] || soundtrack
     if [ $CMD = final ]; then TAG=""; elif [ $CMD = preview ]; then TAG=" PREVIEW"; else TAG=" QUICK"; fi
     node "$T_/encode.cjs" "$WORK/raw" $K $SS "$WAV" "$OUTD/$TITLE $FMT$TAG.mp4"
-    [ -n "$KEEP" ] || rm -rf "$WORK/raw";;
+    [ -n "$KEEP" ] || rm -rf "$WORK/raw"
+    [ $CMD = quick ] || node "$T_/subs.cjs" "$PROJ" "$ID" "$FMT" "$OUTD/$TITLE $FMT$TAG";;
   gif) SRC="$OUTD/$TITLE $FMT.mp4"; [ -f "$SRC" ] || SRC="$OUTD/$TITLE $FMT PREVIEW.mp4"
        [ -f "$SRC" ] || { bash "$ENGINE/film.sh" "$F" preview "$FMT" || exit $?; }
        node "$T_/gif.cjs" "$SRC" "$OUTD/$TITLE $FMT.gif" $W $H "$GIFW" "$GIFFPS";;

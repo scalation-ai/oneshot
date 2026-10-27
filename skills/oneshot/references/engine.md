@@ -51,6 +51,22 @@ a frame is rendered in any order (the renderer runs four pages in parallel, the 
 backwards), so nothing may depend on the frame before. `film.sh <id> check` proves it: it renders
 eight frames in order and again in reverse, and names any that differ.
 
+`check` also names every character the film's own fonts cannot draw (a name in Thai, a ✓, a kana):
+Chrome would draw it in a system font the brand never chose, and a frame shows two faces. It sets each
+character of the page's text again in its font and asks Chrome which fonts drew it, so it sees text
+in the page only, not text drawn on a canvas. Fix it with a font that has them (`references/brand.md`)
+or other words.
+
+## Captions
+
+`film.sh <id> subs [format]` writes the film's words as `renders/<title> <format>.srt` and `.vtt`, and
+`preview` and `final` write them beside each MP4, for a platform's own captions. A film with a voice is
+captioned as it speaks (`films/<id>.voice.json`: each line from when its voice starts to when its words
+leave); one without, as its lines show (each `BandLine` and `Say()`, from when its words appear to when
+they leave). One caption at a time, each ending where the next begins; one over 42 characters goes on two
+lines. The words are the screen's, never a respelling (`say`). Words the film shows some other way
+(a number on a card) are not captioned unless a `Say()` names them.
+
 ## The library (`engine/lib/lib.js`)
 
 **Stage.** `W`, `H` (1080 x 1920, or 1920 x 1080 when `WIDE`), `CXS`, `CYS` the centre. `WIDE` is true

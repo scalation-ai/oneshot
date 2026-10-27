@@ -26,6 +26,9 @@ async function model() {
   if (!fs.existsSync(path.join(VOICE_DIR, 'node_modules', 'kokoro-js')))
     die(`The voice is not set up yet. Run once: bash "${path.join(ENGINE, 'setup.sh')}" --voice\n` +
       '(about 410 MB of packages inside the engine, and a 320 MB voice model in a shared cache)', 2);
+  const lock = f => { try { return fs.readFileSync(path.join(VOICE_DIR, f), 'utf8'); } catch (e) { return null; } };
+  if (process.argv[2] !== '--setup' && lock('package-lock.json') !== lock('node_modules/.oneshot-setup'))   // setup.sh keeps the lock it installed
+    die(`The skill was updated since the voice was set up. Run once: bash "${path.join(ENGINE, 'setup.sh')}" --voice`, 2);
   const req = createRequire(path.join(VOICE_DIR, 'package.json')), { KokoroTTS } = req('kokoro-js');
   req('@huggingface/transformers').env.cacheDir = CACHE;   // kokoro-js's own `env` is another object: it would not move the cache
   const seen = {};
@@ -57,18 +60,6 @@ function writeWav(file, { sr, x }) {                                  // 16-bit 
   fs.writeFileSync(file, b);
 }
 
-// what the film says, as the page declares it, in one format
-async function said(browser, file, q, W, H) {
-  const p = await browser.newPage({ viewport: { width: W, height: H } });
-  const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file://' + file + '?capture=1' + q);
-  await p.waitForFunction(() => window.__ready === true, null, { timeout: 30000 }).catch(() => {});
-  const r = await p.evaluate(() => ({ said: window.__said || [], dur: window.__DUR, ready: window.__ready === true }));
-  await p.close();
-  if (!r.ready) die(`The film did not load${errs.length ? ': ' + errs[0] : ''}. Run film.sh <film> check.`);
-  return r;
-}
-
 (async () => {
   if (process.argv[2] === '--setup') {
     const t0 = Date.now(), c = await speak('Your voice is ready.', 'af_heart', 1);
@@ -84,10 +75,10 @@ async function said(browser, file, q, W, H) {
   // the brand's respellings, whole words only: {"paylark": "pay lark"}
   const respell = s => Object.entries(words).reduce((a, [w, r]) => a.replace(new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), r), s);
 
-  const { chromium } = require('./pw.cjs'), { query } = require('../meta.cjs');
+  const { chromium } = require('./pw.cjs'), { query, SIZE } = require('../meta.cjs'), said = require('./said.cjs');
   const html = path.join(FILMS, f.html || id + '.html'), browser = await chromium.launch();
   const per = [];
-  for (const fmt of f.formats) per.push(await said(browser, html, query(f, fmt), ...(fmt === '16x9' ? [1920, 1080] : [1080, 1920])));
+  for (const fmt of f.formats) per.push(await said(browser, html, query(f, fmt), ...SIZE[fmt]).catch(e => die(e.message)));
   await browser.close();
   const base = per[0].said, notes = [];
   if (per.some(r => r.said.length !== base.length)) notes.push('The formats say different lines: the voice follows the first format, ' + f.formats[0] + '.');

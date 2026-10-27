@@ -4,16 +4,29 @@
 // mud             150 to 600 Hz, where a voice, pads and stacked notes pile up
 // dings           frames where one narrow pitch above 1 kHz stands far over the rest (bells, pops, marimbas, ticks),
 //                 the last 3 s (the end card's sonic logo) left out
+// loudness       BS.1770 integrated loudness in LUFS and the true peak in dBTP (lib/sfx.js loudness), beside the other
+//                 films of the series (the .wav files next to a film's .wav), so no film plays louder than the rest
 // With a reference (a film whose sound the user likes), each number is printed beside the reference's, and the
 // verdicts are judged against it; without one, against a launch film measured for the skill.
+// ffmpeg comes from ffmpeg-static, or $FFMPEG.
 'use strict';
 const { execFileSync } = require('child_process');
+const fs = require('fs'), path = require('path');
+const { loudness } = require(path.join(__dirname, '..', 'lib', 'sfx.js'));
 const SR = 48000, N = 1024, HOP = 480;
 const BASE = { hits: 2.73, low: 67.6, mud: 17.6, dings: 8.1, name: 'a launch film measured for the skill' };
+let FF = process.env.FFMPEG;
+if (!FF) try { FF = require(path.join(__dirname, '..', 'node_modules', 'ffmpeg-static')); } catch (e) {}
+if (!FF || !fs.existsSync(FF)) { console.error('ffmpeg not found. Run the engine setup once: bash setup.sh'); process.exit(1); }
 
-function load(file) {
-  const raw = execFileSync('ffmpeg', ['-v', 'error', '-i', file, '-ac', '1', '-ar', String(SR), '-f', 'f32le', '-'], { maxBuffer: 1 << 30 });
+function load(file, ch = 1) {
+  const raw = execFileSync(FF, ['-v', 'error', '-i', file, '-ac', String(ch), '-ar', String(SR), '-f', 'f32le', '-'], { maxBuffer: 1 << 30 });
   return new Float32Array(raw.buffer, raw.byteOffset, raw.length / 4);
+}
+function loud(file) {   // both channels, as the platforms measure them
+  const x = load(file, 2), n = x.length >> 1, L = new Float64Array(n), R = new Float64Array(n);
+  for (let i = 0; i < n; i++) { L[i] = x[2 * i]; R[i] = x[2 * i + 1]; }
+  return loudness([L, R]);
 }
 function fft(re, im) {   // in place, radix 2
   const n = re.length;
@@ -51,14 +64,14 @@ function measure(file) {
   const tot = band.reduce((a, v) => a + v, 0), pct = v => 100 * v / tot;
   const per2 = Array.from({ length: Math.ceil(dur / 2) }, () => 0); hits.forEach(t => per2[Math.min(per2.length - 1, Math.floor(t / 2))]++);
   const ding2 = per2.map(() => 0); dingAt.forEach(t => ding2[Math.min(ding2.length - 1, Math.floor(t / 2))]++);
-  return { dur, hits: hits.length / dur, low: pct(band[0]), mud: pct(band[1]), dings: 100 * dingFrames / frames, per2, ding2: ding2.map(n => Math.round(100 * n / (2 * SR / HOP))) };
+  return { dur, hits: hits.length / dur, low: pct(band[0]), mud: pct(band[1]), dings: 100 * dingFrames / frames, per2, ding2: ding2.map(n => Math.round(100 * n / (2 * SR / HOP))), ...loud(file) };
 }
 
 const [file, ref] = process.argv.slice(2);
 if (!file) { console.error('usage: node listen.cjs <film.wav|.mp4> [reference]'); process.exit(1); }
-const A = measure(file), R = ref ? { ...measure(ref), name: require('path').basename(ref) } : BASE;
+const A = measure(file), R = ref ? { ...measure(ref), name: path.basename(ref) } : BASE;
 const f1 = v => v.toFixed(1).padStart(6), f2 = v => v.toFixed(2).padStart(6);
-console.log(`${require('path').basename(file)}: ${A.dur.toFixed(1)} s, against ${R.name}`);
+console.log(`${path.basename(file)}: ${A.dur.toFixed(1)} s, against ${R.name}`);
 console.log(`              this   reference`);
 console.log(`hits a second ${f2(A.hits)} ${f2(R.hits)}`);
 console.log(`low end %     ${f1(A.low)} ${f1(R.low)}    under 150 Hz`);
@@ -66,9 +79,21 @@ console.log(`mud %         ${f1(A.mud)} ${f1(R.mud)}    150 to 600 Hz`);
 console.log(`dings %       ${f1(A.dings)} ${f1(R.dings)}    frames with one narrow pitch over 1 kHz standing out`);
 console.log(`hits per 2 s  ${A.per2.join(' ')}`);
 console.log(`dings % per 2 s ${A.ding2.join(' ')}`);
+const db = v => v === undefined ? '     ' : v.toFixed(1).padStart(6);
+console.log(`LUFS          ${db(A.lufs)} ${db(R.lufs)}    loudness: the platforms play everything at about -14`);
+console.log(`true peak dBTP${db(A.tp)} ${db(R.tp)}    over -1, it clips once it is AAC`);
+// the series: every other film's soundtrack next to this one, measured the same way
+const series = /\.wav$/i.test(file) ? fs.readdirSync(path.dirname(path.resolve(file))).filter(f => /\.wav$/i.test(f) && f !== path.basename(file))
+  .map(f => ({ f: f.slice(0, -4), lufs: loud(path.join(path.dirname(path.resolve(file)), f)).lufs })).filter(s => isFinite(s.lufs)) : [];
+if (series.length) console.log(`the series    ${series.map(s => `${s.f} ${s.lufs.toFixed(1)}`).join(', ')}`);
 const out = [];
 if (A.hits > R.hits * 1.3) out.push(`BUSY: ${A.hits.toFixed(2)} hits a second against ${R.hits.toFixed(2)}. Cut sounds on top of the music; let the groove be the rhythm.`);
 if (A.low < R.low - 15) out.push(`THIN: ${A.low.toFixed(0)}% of the energy is under 150 Hz against ${R.low.toFixed(0)}%. The kick and the bass carry a film: the drive mood, or raise them.`);
 if (A.mud > R.mud + 12) out.push(`MUDDY: ${A.mud.toFixed(0)}% sits at 150 to 600 Hz against ${R.mud.toFixed(0)}%: a voice, pads and stacked notes on top of each other.`);
 if (A.dings > Math.max(10, R.dings * 1.5)) out.push(`DINGY: ${A.dings.toFixed(0)}% of frames carry a bright pitched note against ${R.dings.toFixed(0)}%. Keep pitched hits (pop, bell, marimba, blip, tick) for the sonic logo.`);
+if (A.tp > -1) out.push(`PEAKS: ${A.tp.toFixed(2)} dBTP. Over -1 the AAC in the film clips: write the soundtrack again (the master holds -1.5), or lower a track.`);
+if (A.lufs > -10) out.push(`LOUD: ${A.lufs.toFixed(1)} LUFS. The platforms turn it down to about -14 anyway: M.write(out, { lufs: -14 }) sets it there.`);
+if (A.lufs < -18) out.push(`QUIET: ${A.lufs.toFixed(1)} LUFS. It plays under the feed around it, and not every platform turns it up: raise the groove or the track.`);
+const all = [A.lufs, ...series.map(s => s.lufs)], lo = Math.min(...all), hi = Math.max(...all);
+if (series.length && hi - lo > 2) out.push(`SERIES: its films play from ${lo.toFixed(1)} to ${hi.toFixed(1)} LUFS, ${(hi - lo).toFixed(1)} apart. Give every film's score the same M.write(out, { lufs: ${Math.max(-16, Math.floor(lo))} }), which only turns a film down.`);
 console.log(out.length ? out.map(s => 'WARN ' + s).join('\n') : 'PASS: as clean as the reference');

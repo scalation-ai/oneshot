@@ -12,6 +12,10 @@ say why in the script. When the user asks for a look ("fast cuts", "calm"), choo
 
 ## The five styles
 
+`film.sh gallery` cuts a 15 s template film in each style, around its first change of scene, and in each
+opening, over its first two bars: `renders/gallery/sheets/style<name>.png` and `open<name>.png`, and live in
+`renders/gallery/index.html`. Look at them before offering a style in the concepts.
+
 | Style | Camera | From one scene to the next | Lines | Moods |
 |---|---|---|---|---|
 | glide | one continuous shot, drifting toward the scene's close shot | the new screen pushes the old one out, one direction all film | letters rise and sink under the product | calm, minimal, upbeat, drive |

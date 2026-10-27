@@ -17,6 +17,12 @@ synthesized groove, and recorded element sounds placed on their frames), ffmpeg 
 the engine as `bash "<this skill>/engine/film.sh" ...` from the user's current folder. Everything the skill
 makes goes in one folder there, `oneshot-output/`; nothing else in the user's folder changes.
 
+**Every choice the user makes goes through the question tool** (`AskUserQuestion` in Claude Code), never as
+options written out in a message for them to answer by typing: the concepts, a brand value marked "guess",
+which film is meant, the yes before `final`. Put the recommended option first with "(Recommended)" at the end
+of its label, keep labels to a few words, and put the reasons in each option's description. Only when the
+session has no such tool, write the options as a numbered list and say which one you recommend.
+
 ## Options
 
 The user may set these in words or as flags (`/oneshot --duration 15 --draft`). For anything not given,
@@ -92,20 +98,22 @@ decide from the product and its audience, and state the choice in the concepts y
   keycaps for each key pressed. Each one adds words and boxes to a frame that should have fewer; used on
   every beat, they turn a film into a tutorial.
 
-## 3. Three concepts before any script (the hard rule)
+## 3. Three concepts, then the script (always)
 
-A concept is one sentence about the **picture**, not the product: the single idea the film is made of.
-Write **three that differ in that idea**, not three stories told with the same screens:
+Before any script, decide what the film is: one idea every shot serves, said as what the viewer **sees**,
+never as what the product offers. Propose three, and make them **three different ideas**, not one idea
+reordered across the same screens. Shapes that work:
 
-- **one thing travels through everything:** the row the user worries about is lifted, opens into its
-  detail, becomes the card whose number moved, and its dot lands in the wordmark;
-- **one camera move through scale:** start close on the number, pull back through the screen to the whole
-  day, dive into the next screen through the control that changes it; or one take from the whole (a year,
-  a timeline, a list of thousands) down to the one thing that matters and back, every level inside the one
-  before, so nothing is ever replaced;
-- **before and after in one frame:** the old way and the new side by side, until the new one takes the frame;
-- **a chain reaction:** each beat is the cause of the next (the tap flips the status, the status moves the
-  total, the total lands the pin);
+- **a single object is the thread:** the row the user worries about rises out of its list, opens into its
+  detail, turns into the card whose number moved, and ends as the dot in the wordmark;
+- **the camera never cuts, it travels:** close on the number, back out through the screen to the whole day,
+  then in through the control that changes it to the next screen. Or from the widest view (a year, a
+  timeline, a list of thousands) down to the one thing that matters and out again, each level nested in the
+  last, so nothing is swapped out;
+- **old and new share the frame:** the way it used to be done and the product's way play side by side, until
+  the new side pushes the old one out;
+- **one push sets off the rest:** every beat causes the next (the tap flips the status, the status changes
+  the total, the total drops the pin);
 - **one line in, the thing out:** for a product that makes things. A big pill on a neutral ground (warm
   paper suits it: every output's colours read against it), the first line typed close. Each line grows out
   of the pill into a finished output that fills the frame and plays its own short story, already moving;
@@ -123,16 +131,20 @@ Write **three that differ in that idea**, not three stories told with the same s
 - **the input becomes the output:** the thing the user types or taps turns, in one piece, into what the
   product makes, and the output fills the frame within two seconds. Never stop on the machinery between
   them (a timeline, a progress bar, a strip of frames): that is the process, not the result;
-- or the product's own metaphor, one continuous surface, a typographic system.
+- or a picture the product already uses for itself, one surface the camera never leaves, or a film made of
+  type alone.
 
 **End on the film's own material.** The wordmark is written by the caret the film began with, spelled in
 its grid, or landed as its dot: never a logo that fades in over an emptied stage.
 
-For each, give: the hook frame (frame 1), **what carries every change of scene**, what it rules out (no
-cards? no cuts?), its edit style and opening (`references/styles.md`): no two of the three in the same
+For each concept, set out: frame 1, the hook; **how each change of scene is carried**; what the idea forbids
+(cards? cuts?); its edit style and opening (`references/styles.md`): no two of the three in the same
 style, and **its look**: the ground (one flat field: paper, a near-black room, the brand's own colour full
 bleed), the one accent, the type. Choose the look fresh for each film; the last film's look, or the
-templates' light stage, is never a silent default. Explain each in plain words, recommend one, and let the user pick. Then start the film in the picked
+templates' light stage, is never a silent default. Explain each in plain words, recommend one, and let the user pick
+with the question tool: one question, one option per concept, the recommended one first. Its label is the
+concept's name, its description the one-sentence idea, and its preview the hook frame, the carry, the style
+and opening, and the look. Wait for the answer before writing any script. Then start the film in the picked
 style and opening: `film.sh new <id> phone|desktop|app [secs] --style s --open o --mood m [--voice]
 [--format f,f]` (without `--style`, `new` picks one unlike the series' last film; offer that pick as one of
 the three).
@@ -142,8 +154,8 @@ lengths, bursts, stillness and energy into `reference/<name>/ref.html`. Write th
 concepts to land near them, or to depart from them on purpose (say which). A film is often half still and its
 cuts come in bursts; watching once does not show that.
 
-**Never default to the template's story** (situation, action, result in three screens). It is a working
-start, not a concept. A new film told in the template's beats reads as the template. Its frame is the same
+**The template's story is not a concept** (situation, action, result in three screens). It is there so a
+film can start, not to be the film: a new film told in its beats looks like every film made from it. Its frame is the same
 trap: a product card with a headline panel beside it and a logo end card is what an agent makes with no
 skill at all. Use the templates for a quick
 draft and their library, never for a concept's picture.
@@ -263,7 +275,8 @@ y 1000. `read` measures both on the real frames.
 - **Every film must work muted:** the picture alone tells the story.
 - **Measure it, because you cannot listen:** `film.sh <id> listen` must PASS (busy, thin, muddy and dingy are
   measured against a launch film the user liked; `REF=<clip>` compares with any reference). `onsets` checks
-  that the hits land on the bar lines. Mix: peak about -1 dBFS, RMS -12 to -16 dBFS. The user still signs
+  that the hits land on the bar lines. Mix: true peak -1.5 dBTP (the master holds it), RMS -12 to -16 dBFS, and
+  every film of a series within 2 LU of the others (`references/sound.md`). The user still signs
   off every soundtrack by ear. Details: `references/sound.md`.
 
 ## 9. The loop
@@ -271,26 +284,29 @@ y 1000. `read` measures both on the real frames.
     film.sh ref <video>                               a reference clip in numbers, before the concepts
     film.sh new <id> phone|desktop|app [secs] --style s --open o --mood m [--voice] [--format f,f]
     film.sh capture <address or file> <name>          a reference screenshot into reference/
-    film.sh <id> check                                page errors, warnings, render(t) purity
+    film.sh <id> check                                page errors, warnings, render(t) purity, characters the fonts lack
     film.sh <id> read [format]                        carry, rhythm, speed, cross-fades, legibility, safe zone
     T="0,2.5,5" film.sh <id> stills [format]          full-size frames to look at
     film.sh <id> sheet [format]                       a frame every 0.125 s: look at all of them
     film.sh <id> voice                                a film with a voice: each line spoken, timed, checked
     film.sh <id> audio | onsets                       write the score | its hits against the bar lines
-    [REF=<clip>] film.sh <id> listen                  the soundtrack in numbers: busy, thin, muddy, dingy
+    [REF=<clip>] film.sh <id> listen                  the soundtrack in numbers: busy, thin, muddy, dingy, loud
     film.sh <id> poster [format]                      the poster frame
     film.sh <id> quick [format]                       1x, no motion blur: a fast look for yourself
     film.sh <id> preview [format]                     the MP4 the user watches: 1x, with motion blur
     film.sh <id> final [format]                       2x with motion blur, only after the user's yes
     film.sh <id> gif [format]                         a looping GIF of it (no sound)
+    film.sh <id> subs [format]                        caption files (.srt, .vtt); preview and final write them too
     (a format is phone, wide, square or 4x5; `all` runs a command for every format the film has)
     film.sh studio                                    every film, every format, with sound
+    film.sh gallery                                   every move, style and opening, live and as contact sheets
 
 1. The concepts (section 3), the user's pick, then `new` in that style and opening. Then the **script**:
    the bar-by-bar table with the carry column, numbers from `story.md`, lines checked against `rules.md`.
    Show it before building.
 2. Rebuild the screens, set the shots, the beats and each scene's carry. The library and its traps:
-   `references/engine.md`; the carries and springs: `references/moves.md`.
+   `references/engine.md`; the carries and springs: `references/moves.md`. Pick them by looking: `film.sh
+   gallery` draws each one in the brand, with its speed.
 3. Write the score. Then `check` (it must say pure), then **`read` in every format**: carry 0.6 or more with
    no bare change, rhythm and cross-fade not failing, every legibility and safe-zone warning fixed or
    explained (`references/read.md`). Look at the frames either side of every change in its report: a
@@ -303,6 +319,8 @@ y 1000. `read` measures both on the real frames.
    Before starting it, tell the user how long it will take: about 1.7 times the preview's time (a 15 s template
    film on a 10-core Mac: about 3 minutes for the preview, 5½ for the final), more for a film that moves most of the time.
    Both print a line every tenth of the way with the time left.
+   Each MP4 comes with its words as `.srt` and `.vtt` beside it, for the platform's own captions (most feed
+   video plays muted); tell the user they are there. They are never burned into the picture.
 
 ## References
 
