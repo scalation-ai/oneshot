@@ -20,7 +20,8 @@
 #             gallery/ folder, in its defaults); open its index.html
 #   and per film, film.sh <film> <command> [format]:
 #   build     inline the brand, fonts and library into films/<film>.html (every command does this first)
-#   check     page errors, the engine's warnings, and whether render(t) is pure (frames out of order match)
+#   check     page errors, the engine's warnings, whether render(t) is pure (frames out of order match), and every
+#             character the film's fonts cannot draw (drawn in a system font instead)
 #   read      the film in numbers before anyone watches it: what carries each change of scene (or nothing does), the
 #             rhythm and the rests, speed, cross-fades, legibility, the feed's safe zone, framing; into
 #             renders/<film>-<format>/read.html (STRICT=1: exit 1 when a leg fails)
@@ -35,6 +36,8 @@
 #             (REF=<clip> to compare with a reference)
 #   preview   the film the user watches: 1x with motion blur (up to 8 captures on a moving frame, one on a hold), into
 #             renders/. A preview without the shutter strobes on every fast move and is judged on that
+#   subs      the film's words as caption files (.srt and .vtt) for a platform's own captions, timed as spoken in a film
+#             with a voice, else as its lines show; preview and final write them next to the MP4
 #   quick     1x, one capture a frame, no motion blur: a fast look for yourself, never what the user is shown
 #   final     2x supersampled with motion blur sized per frame (1 capture on a hold, up to 16 on the fastest move,
 #             never across a cut); only once the preview is approved
@@ -141,6 +144,7 @@ case $CMD in
             NOVOICE=1 node "$SCORE" "$WORK/music.wav" >/dev/null; node "$T_/onsets.cjs" "$WORK/music.wav" "$BPM" 16 "$ID.voice.json"; rm -f "$WORK/music.wav"
           else node "$T_/onsets.cjs" "$WAV" "$BPM"; fi;;
   listen) [ -f "$WAV" ] || soundtrack; node "$T_/listen.cjs" "$WAV" ${REF:+"$REF"};;
+  subs) node "$T_/subs.cjs" "$PROJ" "$ID" "$FMT" "$OUTD/$TITLE $FMT";;
   sheet) node "$T_/sheet.cjs" "$HTML" "$WORK/sheet" $DUR 0.125 $W $H "$Q";;
   quick|preview|final)
     # the final's shutter holds up to 16 captures a frame, the preview's 8; render.cjs takes only as many as each frame's
@@ -152,7 +156,8 @@ case $CMD in
     [ -f "$WAV" ] || soundtrack
     if [ $CMD = final ]; then TAG=""; elif [ $CMD = preview ]; then TAG=" PREVIEW"; else TAG=" QUICK"; fi
     node "$T_/encode.cjs" "$WORK/raw" $K $SS "$WAV" "$OUTD/$TITLE $FMT$TAG.mp4"
-    [ -n "$KEEP" ] || rm -rf "$WORK/raw";;
+    [ -n "$KEEP" ] || rm -rf "$WORK/raw"
+    [ $CMD = quick ] || node "$T_/subs.cjs" "$PROJ" "$ID" "$FMT" "$OUTD/$TITLE $FMT$TAG";;
   gif) SRC="$OUTD/$TITLE $FMT.mp4"; [ -f "$SRC" ] || SRC="$OUTD/$TITLE $FMT PREVIEW.mp4"
        [ -f "$SRC" ] || { bash "$ENGINE/film.sh" "$F" preview "$FMT" || exit $?; }
        node "$T_/gif.cjs" "$SRC" "$OUTD/$TITLE $FMT.gif" $W $H "$GIFW" "$GIFFPS";;

@@ -284,7 +284,7 @@ y 1000. `read` measures both on the real frames.
     film.sh ref <video>                               a reference clip in numbers, before the concepts
     film.sh new <id> phone|desktop|app [secs] --style s --open o --mood m [--voice] [--format f,f]
     film.sh capture <address or file> <name>          a reference screenshot into reference/
-    film.sh <id> check                                page errors, warnings, render(t) purity
+    film.sh <id> check                                page errors, warnings, render(t) purity, characters the fonts lack
     film.sh <id> read [format]                        carry, rhythm, speed, cross-fades, legibility, safe zone
     T="0,2.5,5" film.sh <id> stills [format]          full-size frames to look at
     film.sh <id> sheet [format]                       a frame every 0.125 s: look at all of them
@@ -296,6 +296,7 @@ y 1000. `read` measures both on the real frames.
     film.sh <id> preview [format]                     the MP4 the user watches: 1x, with motion blur
     film.sh <id> final [format]                       2x with motion blur, only after the user's yes
     film.sh <id> gif [format]                         a looping GIF of it (no sound)
+    film.sh <id> subs [format]                        caption files (.srt, .vtt); preview and final write them too
     (a format is phone, wide, square or 4x5; `all` runs a command for every format the film has)
     film.sh studio                                    every film, every format, with sound
     film.sh gallery                                   every move, style and opening, live and as contact sheets
@@ -315,6 +316,8 @@ y 1000. `read` measures both on the real frames.
    (`references/review.md`). Verify every finding on a full-size frame before fixing it.
 5. `poster` and `preview`. The user watches. `final` only after their yes: it gives every moving frame as
    many motion-blur captures as its speed needs (up to 16), one to a still frame, and never blurs across a cut.
+   Each MP4 comes with its words as `.srt` and `.vtt` beside it, for the platform's own captions (most feed
+   video plays muted); tell the user they are there. They are never burned into the picture.
 
 ## References
 
