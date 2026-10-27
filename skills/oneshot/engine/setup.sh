@@ -16,6 +16,7 @@ if [ -z "$VOICE" ] || [ ! -d "$E/node_modules/playwright" ]; then
   echo "2/3  The headless Chrome"
   PLAYWRIGHT_SKIP_BROWSER_GC=1 npx playwright install chromium   # never prune browsers other projects use
   [ "$(uname)" = Darwin ] || echo "     On Linux, if Chromium will not start, run once: npx playwright install-deps chromium"
+  cp "$E/package-lock.json" "$E/node_modules/.oneshot-setup"   # what was set up: film.sh asks again when the lock changes
   echo "3/3  Self-test: a throwaway project and film, built, checked and scored"
   T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
   bash "$E/film.sh" init "$T" >/dev/null
@@ -33,6 +34,7 @@ if [ -n "$VOICE" ]; then
   (cd "$E/voice" && npm install --no-audit --no-fund --loglevel=error)
   echo "The voice 2/2  The model (320 MB, downloaded once into a shared cache) and a test line"
   node "$E/tools/voice.cjs" --setup
+  cp "$E/voice/package-lock.json" "$E/voice/node_modules/.oneshot-setup"
 fi
 echo
 echo "Ready. From your project's folder:  bash \"$E/film.sh\" init   (it makes ./oneshot-output)"

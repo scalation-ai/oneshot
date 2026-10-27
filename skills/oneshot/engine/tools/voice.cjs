@@ -26,6 +26,9 @@ async function model() {
   if (!fs.existsSync(path.join(VOICE_DIR, 'node_modules', 'kokoro-js')))
     die(`The voice is not set up yet. Run once: bash "${path.join(ENGINE, 'setup.sh')}" --voice\n` +
       '(about 410 MB of packages inside the engine, and a 320 MB voice model in a shared cache)', 2);
+  const lock = f => { try { return fs.readFileSync(path.join(VOICE_DIR, f), 'utf8'); } catch (e) { return null; } };
+  if (process.argv[2] !== '--setup' && lock('package-lock.json') !== lock('node_modules/.oneshot-setup'))   // setup.sh keeps the lock it installed
+    die(`The skill was updated since the voice was set up. Run once: bash "${path.join(ENGINE, 'setup.sh')}" --voice`, 2);
   const req = createRequire(path.join(VOICE_DIR, 'package.json')), { KokoroTTS } = req('kokoro-js');
   req('@huggingface/transformers').env.cacheDir = CACHE;   // kokoro-js's own `env` is another object: it would not move the cache
   const seen = {};
