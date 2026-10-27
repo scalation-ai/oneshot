@@ -263,7 +263,8 @@ y 1000. `read` measures both on the real frames.
 - **Every film must work muted:** the picture alone tells the story.
 - **Measure it, because you cannot listen:** `film.sh <id> listen` must PASS (busy, thin, muddy and dingy are
   measured against a launch film the user liked; `REF=<clip>` compares with any reference). `onsets` checks
-  that the hits land on the bar lines. Mix: peak about -1 dBFS, RMS -12 to -16 dBFS. The user still signs
+  that the hits land on the bar lines. Mix: true peak -1.5 dBTP (the master holds it), RMS -12 to -16 dBFS, and
+  every film of a series within 2 LU of the others (`references/sound.md`). The user still signs
   off every soundtrack by ear. Details: `references/sound.md`.
 
 ## 9. The loop
@@ -277,7 +278,7 @@ y 1000. `read` measures both on the real frames.
     film.sh <id> sheet [format]                       a frame every 0.125 s: look at all of them
     film.sh <id> voice                                a film with a voice: each line spoken, timed, checked
     film.sh <id> audio | onsets                       write the score | its hits against the bar lines
-    [REF=<clip>] film.sh <id> listen                  the soundtrack in numbers: busy, thin, muddy, dingy
+    [REF=<clip>] film.sh <id> listen                  the soundtrack in numbers: busy, thin, muddy, dingy, loud
     film.sh <id> poster [format]                      the poster frame
     film.sh <id> quick [format]                       1x, no motion blur: a fast look for yourself
     film.sh <id> preview [format]                     the MP4 the user watches: 1x, with motion blur
