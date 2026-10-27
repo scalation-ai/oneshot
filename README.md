@@ -5,7 +5,7 @@ out of the last one, so the film never cuts to the next slide.
 
 [![oneshot: product films, from one line. Watch the 28-second film](.github/assets/poster.png)](https://github.com/scalation-ai/oneshot/releases/download/v0.1.0/oneshot-16x9.mp4)
 
-*The film above was made with oneshot. Click to watch it (28 seconds, with sound).*
+*The film above was made with oneshot. Click the picture to download it (28 seconds, with sound).*
 
 oneshot is an agent skill. You ask your coding agent for a film of your product. It reads your
 product's own colours and fonts and captures the screens the film will show. It proposes three
