@@ -98,20 +98,22 @@ decide from the product and its audience, and state the choice in the concepts y
   keycaps for each key pressed. Each one adds words and boxes to a frame that should have fewer; used on
   every beat, they turn a film into a tutorial.
 
-## 3. Three concepts before any script (the hard rule)
+## 3. Three concepts, then the script (always)
 
-A concept is one sentence about the **picture**, not the product: the single idea the film is made of.
-Write **three that differ in that idea**, not three stories told with the same screens:
+Before any script, decide what the film is: one idea every shot serves, said as what the viewer **sees**,
+never as what the product offers. Propose three, and make them **three different ideas**, not one idea
+reordered across the same screens. Shapes that work:
 
-- **one thing travels through everything:** the row the user worries about is lifted, opens into its
-  detail, becomes the card whose number moved, and its dot lands in the wordmark;
-- **one camera move through scale:** start close on the number, pull back through the screen to the whole
-  day, dive into the next screen through the control that changes it; or one take from the whole (a year,
-  a timeline, a list of thousands) down to the one thing that matters and back, every level inside the one
-  before, so nothing is ever replaced;
-- **before and after in one frame:** the old way and the new side by side, until the new one takes the frame;
-- **a chain reaction:** each beat is the cause of the next (the tap flips the status, the status moves the
-  total, the total lands the pin);
+- **a single object is the thread:** the row the user worries about rises out of its list, opens into its
+  detail, turns into the card whose number moved, and ends as the dot in the wordmark;
+- **the camera never cuts, it travels:** close on the number, back out through the screen to the whole day,
+  then in through the control that changes it to the next screen. Or from the widest view (a year, a
+  timeline, a list of thousands) down to the one thing that matters and out again, each level nested in the
+  last, so nothing is swapped out;
+- **old and new share the frame:** the way it used to be done and the product's way play side by side, until
+  the new side pushes the old one out;
+- **one push sets off the rest:** every beat causes the next (the tap flips the status, the status changes
+  the total, the total drops the pin);
 - **one line in, the thing out:** for a product that makes things. A big pill on a neutral ground (warm
   paper suits it: every output's colours read against it), the first line typed close. Each line grows out
   of the pill into a finished output that fills the frame and plays its own short story, already moving;
@@ -129,13 +131,14 @@ Write **three that differ in that idea**, not three stories told with the same s
 - **the input becomes the output:** the thing the user types or taps turns, in one piece, into what the
   product makes, and the output fills the frame within two seconds. Never stop on the machinery between
   them (a timeline, a progress bar, a strip of frames): that is the process, not the result;
-- or the product's own metaphor, one continuous surface, a typographic system.
+- or a picture the product already uses for itself, one surface the camera never leaves, or a film made of
+  type alone.
 
 **End on the film's own material.** The wordmark is written by the caret the film began with, spelled in
 its grid, or landed as its dot: never a logo that fades in over an emptied stage.
 
-For each, give: the hook frame (frame 1), **what carries every change of scene**, what it rules out (no
-cards? no cuts?), its edit style and opening (`references/styles.md`): no two of the three in the same
+For each concept, set out: frame 1, the hook; **how each change of scene is carried**; what the idea forbids
+(cards? cuts?); its edit style and opening (`references/styles.md`): no two of the three in the same
 style, and **its look**: the ground (one flat field: paper, a near-black room, the brand's own colour full
 bleed), the one accent, the type. Choose the look fresh for each film; the last film's look, or the
 templates' light stage, is never a silent default. Explain each in plain words, recommend one, and let the user pick
@@ -151,8 +154,8 @@ lengths, bursts, stillness and energy into `reference/<name>/ref.html`. Write th
 concepts to land near them, or to depart from them on purpose (say which). A film is often half still and its
 cuts come in bursts; watching once does not show that.
 
-**Never default to the template's story** (situation, action, result in three screens). It is a working
-start, not a concept. A new film told in the template's beats reads as the template. Its frame is the same
+**The template's story is not a concept** (situation, action, result in three screens). It is there so a
+film can start, not to be the film: a new film told in its beats looks like every film made from it. Its frame is the same
 trap: a product card with a headline panel beside it and a logo end card is what an agent makes with no
 skill at all. Use the templates for a quick
 draft and their library, never for a concept's picture.
