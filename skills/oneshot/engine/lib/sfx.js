@@ -342,6 +342,9 @@ function music(M, film, { drop = 0, cut = null, gain = 1, fadeIn = 0.02, fadeOut
   lay(M, L, R, 0, { gain, fadeIn, fadeOut, breaks });
 }
 
+// bed() was the synthesized groove, removed in 0.3.0: a score from before then says how to move to a real track
+function bed() { throw new Error("bed() is gone: a film's music is now a real track. Give the film one (film.sh music lists the catalogue; film.sh <film> music <track or file>), then replace bed(...) in its score with music(M, '<film>', { drop: <the film bar for the track's drop> })"); }
+
 // track(M, file, { at, from, until, gain, fadeIn, fadeOut, breaks }) lays a piece of music as it is (wav, mp3, m4a:
 // anything ffmpeg reads), uncut: from `from` seconds into the file, placed at `at` on the film, cut at `until` (the
 // film's end) with a fade out over `fadeOut` seconds. music() is the usual way; this is for a sound file the score
@@ -471,6 +474,6 @@ function voiceClip(file) {
 
 module.exports = { SR, tvec, noise, map, mul, mix, phaseOf, linspace, bp, hp, lp, hz, saw, env_adsr, rngOf,
   kick, clap, hat, shaker, crash, sub_boom, whoosh, riser, reverse_swell, blip, tick, pop, bell, thock, glide, sonar, thud, marimba,
-  clack, key, buzz, odometer, fftconvolve, Mix, sonic_logo, music, cue, voice, readWav, resample,
+  clack, key, buzz, odometer, fftconvolve, Mix, sonic_logo, music, bed, cue, voice, readWav, resample,
   sample, sounds, typing, loudness, track,
   _reseed: s => { rng = rngOf(s); } };
