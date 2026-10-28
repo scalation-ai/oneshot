@@ -105,7 +105,7 @@ const camAt=t=>operate(RIG(t),t,{float:.0012,holds:[[8.5,13.8],[18.5,DUR+1]]});
   (`operate`'s `holds`). A camera that never settles takes away the stillness that makes the moves land.
 - It is integrated once at 240 Hz the first time it is called, so build it after anything it reads is
   measured (a caret's x, a frame's place); until then call `want(t)` directly.
-- Its output is rounded, so a settled camera repeats its frame and the renderer captures it once.
+- Its output is rounded, so a settled camera repeats its frame exactly and is never blurred.
 
 ## The lattice: a ground the camera moves against
 

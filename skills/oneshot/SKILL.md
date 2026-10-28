@@ -12,8 +12,10 @@ the detail becomes the card whose number moved, the full stop flies into the wor
 each other read as a slideshow however good each one is.
 
 Each film is one HTML page whose `render(t)` sets every element from the time alone, so any frame renders on
-its own. A headless Chrome captures 60 frames a second, a sound kit writes the score on the same timeline (a
-synthesized groove, and recorded element sounds placed on their frames), ffmpeg joins them. Everything runs on Node. Paths below are relative to this skill's folder; run
+its own. [HyperFrames](https://github.com/heygen-com/hyperframes) (Apache-2.0) renders it: it seeks the film 60
+times a second in its own headless Chrome, with a camera shutter's motion blur. A sound kit writes the score on the
+same timeline (a synthesized groove, and recorded element sounds placed on their frames), and HyperFrames lays it
+under the picture. Everything runs on Node. Paths below are relative to this skill's folder; run
 the engine as `bash "<this skill>/engine/film.sh" ...` from the user's current folder. Everything the skill
 makes goes in one folder there, `oneshot-output/`; nothing else in the user's folder changes.
 
@@ -44,8 +46,9 @@ decide from the product and its audience, and state the choice in the concepts y
 ## 1. Before the first film
 
 1. **Set up once per machine,** and again after the skill is updated (`film.sh` says when):
-   `bash engine/setup.sh` (Playwright, ffmpeg and a PNG reader inside `engine/`, a headless Chrome in
-   Playwright's shared cache, then a self-test). It needs Node 18 or newer. If Node is missing, say so and
+   `bash engine/setup.sh` (HyperFrames and GSAP, which render; Playwright, which reads and checks; ffmpeg and a
+   PNG reader, all inside `engine/`; a headless Chrome for Playwright and one for HyperFrames, in their shared
+   caches; then a self-test that ends in a render). It needs Node 22 or newer. If Node is missing or older, say so and
    offer to install it with the user's approval; never install silently.
 2. **Set up the project:** `film.sh init` makes `oneshot-output/` in the user's folder (a project made under
    the skill's old name, `motion-clip-output/`, is still found). It starts with three files every film reads:
@@ -314,10 +317,10 @@ y 1000. `read` measures both on the real frames.
    `listen` (it must PASS), `onsets`.
 4. **Two independent reviewers**, one for product truth, one for motion craft, with the read report
    (`references/review.md`). Verify every finding on a full-size frame before fixing it.
-5. `poster` and `preview`. The user watches. `final` only after their yes: it gives every moving frame as
-   many motion-blur captures as its speed needs (up to 16), one to a still frame, and never blurs across a cut.
-   Before starting it, tell the user how long it will take: about 1.7 times the preview's time (a 15 s template
-   film on a 10-core Mac: about 3 minutes for the preview, 5½ for the final), more for a film that moves most of the time.
+5. `poster` and `preview`. The user watches. `final` only after their yes: the preview's motion blur (a 180 degree
+   shutter, never across a declared cut) rendered at twice the size and scaled back down, so every edge is drawn
+   from four pixels. Before starting it, tell the user how long it will take: about 2.6 times the preview's time
+   (a 15 s template film on a 10-core Mac: under a minute for the preview, about 2 minutes for the final).
    Both print a line every tenth of the way with the time left.
    Each MP4 comes with its words as `.srt` and `.vtt` beside it, for the platform's own captions (most feed
    video plays muted); tell the user they are there. They are never burned into the picture.

@@ -1,4 +1,4 @@
-/* reader.js: runs inside a film's page and reports what is on screen right now, for read.cjs and render.cjs.
+/* reader.js: runs inside a film's page and reports what is on screen right now, for read.cjs and gallery.cjs.
    window.__osRead() walks the page and returns every element that paints something of its own (an image, an SVG, a
    canvas, its own text, a background, a border or a shadow), with its box on screen (transforms included, cut to its
    clipping ancestors and to the frame), its effective opacity (its own times every ancestor's) and an identity that
@@ -83,24 +83,5 @@
     for (const b of window.__osRead()) { const a = A.get(b.id); if (!a || a.m === 'ground' || Math.min(a.op, b.op) < 0.05) continue;
       d = Math.max(d, Math.abs(b.x - a.x), Math.abs(b.y - a.y), Math.abs(b.x + b.w - a.x - a.w), Math.abs(b.y + b.h - a.y - a.h)); }
     return d;
-  };
-  // the shutter of one frame, for render.cjs: the times to capture between a and b (the shutter open) so that copies of
-  // the fastest thing land at most `gap` px apart, at most nMax of them, a power of two. Nothing moving: one capture. A
-  // cut inside the shutter (one the film declares, or one step between neighbouring captures carrying 3x the travel of
-  // all the others together) is never exposed across: only the captures before it are kept, so a cut stays a cut.
-  window.__osPlan = (a, b, nMax, gap, cuts) => {
-    let end = b; for (const c of cuts || []) if (c > a + 1e-6 && c <= b) end = Math.min(end, c - 1e-4);
-    const d = window.__osTravel(a, end);
-    if (d < 0.25) return [a + (end - a) / 2];
-    let n = 2; while (n < nMax && d / n > gap) n *= 2;
-    const ts = Array.from({ length: n }, (_, k) => a + (k + 0.5) / n * (end - a));
-    if (typeof window.__motion === 'function' || n < 3) return ts;
-    // each time read once, the steps taken between neighbours
-    const reads = ts.map(t => { window.__seek(t); return new Map(window.__osRead().map(i => [i.id, i])); });
-    const steps = []; for (let k = 1; k < n; k++) { let s = 0; for (const [id, q] of reads[k]) { const p = reads[k - 1].get(id);
-      if (!p || p.m === 'ground' || Math.min(p.op, q.op) < 0.05) continue;
-      s = Math.max(s, Math.abs(q.x - p.x), Math.abs(q.y - p.y), Math.abs(q.x + q.w - p.x - p.w), Math.abs(q.y + q.h - p.y - p.h)); } steps.push(s); }
-    const top = Math.max(...steps), k = steps.indexOf(top), rest = steps.reduce((s, x) => s + x, 0) - top;
-    return top >= 8 && top >= 3 * rest ? ts.slice(0, k + 1) : ts;
   };
 })();
