@@ -4,6 +4,7 @@
   "type": "commonjs",
   "description": "Builds product films from their HTML timelines and renders them with HyperFrames, with their scores",
   "dependencies": {
+    "@ffprobe-installer/ffprobe": "2.1.2",
     "ffmpeg-static": "^5.2.0",
     "gsap": "3.15.0",
     "hyperframes": "0.8.210",
