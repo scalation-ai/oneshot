@@ -40,7 +40,7 @@ const films = [...STYLES.map(([s, m]) => ({ id: 'style' + s, name: s, group: 'st
   ...['problem', 'closeup', 'result'].map(o => ({ id: 'open' + o, name: o, group: 'openings', style: 'glide', open: o, mood: 'calm',
     a: 0, b: CH, call: `film.sh new <id> phone --open ${o}` }))];
 for (const f of films) {
-  const q = run(path.join(ENGINE, 'tools', 'new.cjs'), P, f.id, 'phone', '15', '128', '--style', f.style, '--open', f.open, '--mood', f.mood);
+  const q = run(path.join(ENGINE, 'tools', 'new.cjs'), P, f.id, 'phone', '15', '128', '--style', f.style, '--open', f.open, '--mood', f.mood, '--music', 'none');
   if (q.status) die(q.stderr || q.stdout);
   // what film.sh new says the style or the opening is
   const m = q.stdout.match(new RegExp(`^\\s*${f.group === 'styles' ? 'style' : 'opening'}\\s+\\S+: (.+)$`, 'm'));

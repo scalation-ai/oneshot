@@ -24,7 +24,7 @@ if [ -z "$VOICE" ] || [ ! -d "$E/node_modules/playwright" ]; then
   echo "3/3  Self-test: a throwaway project and film, built, checked, scored, read and rendered"
   T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
   bash "$E/film.sh" init "$T" >/dev/null
-  OK="$(cd "$T" && bash "$E/film.sh" new selftest phone 15 --style glide --open problem --mood calm >/dev/null && bash "$E/film.sh" selftest check)"
+  OK="$(cd "$T" && bash "$E/film.sh" new selftest phone 15 --style glide --open problem --mood calm --music none >/dev/null && bash "$E/film.sh" selftest check)"
   echo "$OK" | sed 's/^/     /'
   [ "$(printf '%s\n' "$OK" | head -1)" = "ready true" ] && printf '%s\n' "$OK" | grep -q '^pure:' || { echo "The self-test film did not load cleanly. Run this again, or see the message above."; exit 1; }
   [ -s "$T/films/selftest.wav" ] || { echo "The self-test score did not write its soundtrack."; exit 1; }

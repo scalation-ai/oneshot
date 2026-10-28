@@ -1,6 +1,6 @@
 ---
 name: oneshot
-description: Make short product films from a product's real screens, rendered from code, where every scene grows out of the last instead of replacing it. 30 seconds by default (15 for one feature, 45 or 60 for a tour), in 9:16 for the phone feed and 16:9, as a series that shares one brand, one set of numbers and one set of rules. It starts from three concepts that differ in their central idea, rebuilds every screen natively and matched to the pixel (never a screenshot, never an AI-made interface), carries each scene into the next with a shared element, a camera move or a declared cut, scores it on the picture's own timeline (one groove that stops before each reveal, and a few recorded element sounds on top; a narrator only if asked), reads the film in numbers (carry, rhythm, legibility, safe zone) before anyone watches it, and passes two independent reviews before the user sees it. The final has real motion blur. Use when asked for a product video, feature video, launch clip, teaser, app or SaaS demo film or social video about a product, to match the feel of a reference clip, or to find out why a product video reads like a slideshow. Not for talking-head footage, captions, or explainers about a topic.
+description: Make short product films from a product's real screens, rendered from code, where every scene grows out of the last instead of replacing it. 30 seconds by default (15 for one feature, 45 or 60 for a tour), in 9:16 for the phone feed and 16:9, as a series that shares one brand, one set of numbers and one set of rules. It starts from three concepts that differ in their central idea, rebuilds every screen natively and matched to the pixel (never a screenshot, never an AI-made interface), carries each scene into the next with a shared element, a camera move or a declared cut, scores it on the picture's own timeline (a real track, the user's own or a CC0 one, cut on its bar lines with its drop on the reveal, and a few recorded element sounds on top; a narrator only if asked), reads the film in numbers (carry, rhythm, legibility, safe zone) before anyone watches it, and passes two independent reviews before the user sees it. The final has real motion blur. Use when asked for a product video, feature video, launch clip, teaser, app or SaaS demo film or social video about a product, to match the feel of a reference clip, or to find out why a product video reads like a slideshow. Not for talking-head footage, captions, or explainers about a topic.
 ---
 
 # Product films that never cut to the next slide
@@ -14,7 +14,7 @@ each other read as a slideshow however good each one is.
 Each film is one HTML page whose `render(t)` sets every element from the time alone, so any frame renders on
 its own. [HyperFrames](https://github.com/heygen-com/hyperframes) (Apache-2.0) renders it: it seeks the film 60
 times a second in its own headless Chrome, with a camera shutter's motion blur. A sound kit writes the score on the
-same timeline (a synthesized groove, and recorded element sounds placed on their frames), and HyperFrames lays it
+same timeline (a real track cut on its bar lines, and recorded element sounds placed on their frames), and HyperFrames lays it
 under the picture. Everything runs on Node. Paths below are relative to this skill's folder; run
 the engine as `bash "<this skill>/engine/film.sh" ...` from the user's current folder. Everything the skill
 makes goes in one folder there, `oneshot-output/`; nothing else in the user's folder changes.
@@ -34,6 +34,9 @@ decide from the product and its audience, and state the choice in the concepts y
   short story (or two or three small ones), 45 or 60 for a tour of the product or the company.
 - `--sound <mood>`: drive, calm, upbeat, bold, playful or minimal. Without it, decide which moods fit the
   product (a launch film drives, a meditation app is calm, a game playful, a finance tool calm or minimal).
+  The mood picks the film's track from the engine's catalogue of CC0 tracks (`film.sh music` lists them).
+- `--music <file>`: the user's own track, which always comes before the catalogue. Its licence is theirs to
+  confirm: ask where it came from, and write it into its licence file.
 - `--voice [name]`: off by default. A narrator reads each line aloud as it appears, in English (the voices:
   `references/sound.md`). The first time it needs `bash engine/setup.sh --voice`: tell the user it downloads
   about 730 MB once, then run it.
@@ -148,8 +151,8 @@ templates' light stage, is never a silent default. Explain each in plain words, 
 with the question tool: one question, one option per concept, the recommended one first. Its label is the
 concept's name, its description the one-sentence idea, and its preview the hook frame, the carry, the style
 and opening, and the look. Wait for the answer before writing any script. Then start the film in the picked
-style and opening: `film.sh new <id> phone|desktop|app [secs] --style s --open o --mood m [--voice]
-[--format f,f]` (without `--style`, `new` picks one unlike the series' last film; offer that pick as one of
+style and opening: `film.sh new <id> phone|desktop|app [secs] --style s --open o --mood m [--music t]
+[--voice] [--format f,f]` (without `--style`, `new` picks one unlike the series' last film; offer that pick as one of
 the three).
 
 **A reference clip comes first** (`--ref`, or the user names one): `film.sh ref <video>` reads its cuts, shot
@@ -251,33 +254,40 @@ y 1000. `read` measures both on the real frames.
 
 ## 8. Sound
 
-- **The music carries the film.** One score per film (`films/<id>.score.cjs`), from `engine/lib/sfx.js`, on
-  the picture's timeline. The groove (`bed`) is the loudest thing in it, with its weight in the kick and
-  the bass, and the cuts land on its downbeats. A launch film's mood is `drive`.
+- **The music carries the film, and it is a real track.** The user's own, or one from the engine's catalogue
+  of CC0 tracks (`engine/data/music.json`: instrumental, public domain, each licence checked on its source
+  page; `film.sh new` picks one of the mood, unlike the last film's). The film is at the track's tempo, so its
+  bars are the track's. One score per film (`films/<id>.score.cjs`), from `engine/lib/sfx.js`, on the
+  picture's timeline: `music(M, id, { drop })` lays the track with its drop on the film bar given, and
+  `{ cut: [[film bar, track bar, bars], ...] }` cuts it on bar lines to any shape (`film.sh <id> music` prints
+  every bar: how loud, where it rises and drops). The track is the loudest thing in the score, its drop lands on
+  the reveal, and the film's cuts land on its downbeats. A synthesized groove sounded scene by scene and weak
+  next to a real track; the engine has none.
 - **Element sounds are recordings.** Every sound on top of the music comes from `engine/sounds/` (CC0: a
   real keyboard, swooshes, impacts, short UI clicks and one ding): `typing(M, times, gain, { text })` for a
   line typed, `sample('motion/swoosh')` for a whip, `sample('impact/soft')` for a landing. The synthesized
   hits in `sfx.js` (`key`, `pop`, `blip`, `tick`, `thock`, `marimba`, `glide`) are the old kit: a film whose
-  every effect was one of them sounded cheap next to the reference, whatever its timing. Keep them for the
-  groove.
+  every effect was one of them sounded cheap next to the reference, whatever its timing. Keep them for what
+  no recording covers.
 - **Few sounds on top, and none of them pitched.** A sound goes on top only where the music cannot say it:
   keys while a line is typed (the reference's most frequent effect), the send, a swoosh under a whip, a soft
   impact on a landing, a click per row as a list checks off. About one a bar, never one per event. Marimba
   runs, pops, blips, glides and bells on events made one film sound like a pinball machine ("dring, dut");
   the one pitched sound is the sonic logo's ding, placed in a silence, which every film of a series closes
   on (`sonic_logo`, or the brand's own).
-- **Stop the music to make a reveal land.** `bed(M, mood, { breaks: [[t0, t1]] })` cuts the groove dead for a
-  beat or two before a reveal: the line typed or the send is heard alone, and the groove drops back in on
-  the reveal. The music may also wait for the first event (`from: 2`): a prompt typed in a quiet room, the
-  drop on the send. A groove from frame 1 under someone typing sounds like a template. A licensed track
-  the user supplies beats the kit's groove: cut the film to its downbeats (`references/sound.md`).
+- **Make the reveal land on the drop.** Cut the track so its quiet bars (a build, a break) sit under the set-up
+  and its drop under the reveal: `{ cut: [[0, 13, 3], [3, 16, 7]] }` plays a break under the first three
+  bars and the drop on bar 3. Every splice is on a bar line, and the loud and quiet bars keep their
+  difference, which is what makes the drop land. `breaks: [[t0, t1]]` stops the track dead for a beat
+  before a reveal, so the line typed or the send is heard alone (`references/sound.md`).
 - **No voice unless the user asks for one.** A film of results carries its words on screen and its feeling
-  in the music. A voice, a groove and effects all share the middle of the spectrum: the one narrated
+  in the music. A voice, a track and effects all share the middle of the spectrum: the one narrated
   oneshot film put half its energy at 150 to 600 Hz and read as clutter. When there is a voice, it says
   what the screen says, and the effects drop to the keys and the logo.
 - **Every film must work muted:** the picture alone tells the story.
 - **Measure it, because you cannot listen:** `film.sh <id> listen` must PASS (busy, thin, muddy and dingy are
-  measured against a launch film the user liked; `REF=<clip>` compares with any reference). `onsets` checks
+  measured against the film's own track alone, so what is judged is what the score adds on top of it;
+  `REF=<clip>` compares with any reference). `onsets` checks
   that the hits land on the bar lines. Mix: true peak -1.5 dBTP (the master holds it), RMS -12 to -16 dBFS, and
   every film of a series within 2 LU of the others (`references/sound.md`). The user still signs
   off every soundtrack by ear. Details: `references/sound.md`.
@@ -285,7 +295,9 @@ y 1000. `read` measures both on the real frames.
 ## 9. The loop
 
     film.sh ref <video>                               a reference clip in numbers, before the concepts
-    film.sh new <id> phone|desktop|app [secs] --style s --open o --mood m [--voice] [--format f,f]
+    film.sh new <id> phone|desktop|app [secs] --style s --open o --mood m [--music t] [--voice] [--format f,f]
+    film.sh music [mood]                              the catalogue of CC0 tracks: tempo, moods, where each drops
+    film.sh <id> music [track|file|none]              the film's track bar by bar, or another (the film takes its tempo)
     film.sh capture <address or file> <name>          a reference screenshot into reference/
     film.sh <id> check                                page errors, warnings, render(t) purity, characters the fonts lack
     film.sh <id> read [format]                        carry, rhythm, speed, cross-fades, legibility, safe zone

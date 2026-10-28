@@ -6,11 +6,13 @@
 #             story.md, rules.md, films.json, films/, reference/; renders/ fills as films are made
 #   brand     film.sh brand [folder] [--write]   read the product's own fonts, colours, theme and name into brand.json
 #   list      the project's films and their formats
-#   new       film.sh new <id> phone|desktop|app [seconds] [bpm] [--mood m[,m]] [--voice [name]] [--format f[,f]]   start
-#             a film from a template, registered (phone: a phone app; desktop: a web app in a browser; app: a native
-#             desktop app on its computer's screen); it picks the edit style, the opening, the tempo and the key, unlike
-#             the last film (--style, --open to choose); --voice: a narrator says each line as it appears; --format:
-#             its cuts, of 9:16, 16:9, 1:1 and 4:5 (or all)
+#   new       film.sh new <id> phone|desktop|app [seconds] [--mood m[,m]] [--music track|file|none] [--voice [name]]
+#             [--format f[,f]]   start a film from a template, registered (phone: a phone app; desktop: a web app in a
+#             browser; app: a native desktop app on its computer's screen); it picks the edit style, the opening and the
+#             music (a catalogue track of the mood), unlike the last film (--style, --open, --music to choose), and the
+#             film takes its track's tempo; --voice: a narrator says each line as it appears; --format: its cuts, of
+#             9:16, 16:9, 1:1 and 4:5 (or all)
+#   music     film.sh music [mood]   the catalogue of CC0 tracks a film may use: tempo, moods, where each drops
 #   capture   film.sh capture <url or file> <name> [width] [height]   a reference screenshot into reference/<name>.png
 #   ref       film.sh ref <video>   a reference film in numbers (cuts, shot lengths, bursts, stillness, energy) into
 #             reference/<video name>/ref.html, before a script is written against its feel
@@ -30,10 +32,13 @@
 #   sheet     contact sheets, one frame every 0.125 s, into renders/<film>-<format>/
 #   poster    the poster frame (T= or the film's "poster" second) into renders/
 #   voice     a film with a voice: speak its lines (films/voice/), time each where its words appear, say which run long
+#   music     film.sh <film> music [track|file|none]   the film's track bar by bar (how loud, where it rises and
+#             drops), to cut it in the score; or another track, fetched and measured, the film moved to its tempo
 #   audio     write the soundtrack from its score (films/<film>.score.cjs), the voice first if the film has one
 #   onsets    the soundtrack's strongest hits against the bar lines (does the sound land on the picture)
-#   listen    the soundtrack in numbers: hits a second, low end, mud, dings, loudness against the series' other films
-#             (REF=<clip> to compare with a reference)
+#   listen    the soundtrack in numbers: hits a second, low end, mud, dings, beside the film's own track alone (what
+#             the score adds on top of it is judged), and loudness against the series' other films (REF=<clip>: against
+#             a reference instead)
 #   preview   the film the user watches: rendered by HyperFrames at 1x with its motion blur (a 180 degree shutter,
 #             never across a cut), into renders/. A preview without the shutter strobes on every fast move
 #   subs      the film's words as caption files (.srt and .vtt) for a platform's own captions, timed as spoken in a film
@@ -94,7 +99,9 @@ if [ "$F" = studio ]; then
   for f in *.src.html; do [ -e "$f" ] && node "$ENGINE/build.cjs" "$PROJ" "$(basename "$f" .src.html)" >/dev/null; done
   URL="file://$PROJ/studio.html"; if command -v open >/dev/null; then open "$URL"; else xdg-open "$URL" >/dev/null 2>&1 || echo "$URL"; fi; exit 0
 fi
+export ONESHOT_CALLER="$CALLER"   # a music file the user names is a path from the folder film.sh was run in
 if [ "$F" = new ]; then node "$ENGINE/tools/new.cjs" "$PROJ" "${@:2}"; exit $?; fi
+if [ "$F" = music ]; then node "$ENGINE/tools/tracks.cjs" list "$2"; exit $?; fi
 if [ "$F" = brand ]; then   # the product is the folder film.sh runs in (the one holding oneshot-output), or a given one
   SRC="$CALLER"; WR=""
   for a in "${@:2}"; do if [ "$a" = --write ]; then WR=--write; else SRC="$a"; fi; done
@@ -112,6 +119,9 @@ if [ "$F" = capture ]; then
   mkdir -p "$PROJ/reference"; node "$ENGINE/tools/capture.cjs" "$SRC" "$PROJ/reference/$3.png" "${4:-1440}" "${5:-900}"; exit 0
 fi
 [ -z "$CMD" ] && { usage; exit 1; }
+if [ "$CMD" = music ]; then   # the film's music, bar by bar; or another: a catalogue track, the user's file, or none
+  if [ -z "$3" ]; then node "$ENGINE/tools/tracks.cjs" show "$PROJ" "$F"; else node "$ENGINE/tools/tracks.cjs" use "$PROJ" "$F" "$3"; fi; exit $?
+fi
 if [ "$3" = all ]; then   # every format of the film, in turn (an unknown film fails here: a loop over nothing would pass)
   FMTS="$(json 'const f=require(process.argv[1])[process.argv[2]];if(!f){console.error("Unknown film "+process.argv[2]);process.exit(1)}console.log(f.formats.join(" "))' "$PROJ/films.json" "$F")" || exit 1
   for x in $FMTS; do
@@ -146,7 +156,11 @@ case $CMD in
           if [ -n "$VOICE" ]; then   # the hits are the music's: measured without the voice, whose clips are listed after them
             NOVOICE=1 node "$SCORE" "$WORK/music.wav" >/dev/null; node "$T_/onsets.cjs" "$WORK/music.wav" "$BPM" 16 "$ID.voice.json"; rm -f "$WORK/music.wav"
           else node "$T_/onsets.cjs" "$WAV" "$BPM"; fi;;
-  listen) [ -f "$WAV" ] || soundtrack; node "$T_/listen.cjs" "$WAV" ${REF:+"$REF"};;
+  listen) [ -f "$WAV" ] || soundtrack
+          # against REF, else against the film's own track alone: what the score adds on top of it is what is judged
+          if [ -n "$REF" ]; then node "$T_/listen.cjs" "$WAV" "$REF"
+          else MUSICONLY=1 NOVOICE=1 node "$SCORE" "$WORK/music-alone.wav" >/dev/null
+               node "$T_/listen.cjs" "$WAV" "$WORK/music-alone.wav" --own; rm -f "$WORK/music-alone.wav"; fi;;
   subs) node "$T_/subs.cjs" "$PROJ" "$ID" "$FMT" "$OUTD/$TITLE $FMT";;
   sheet) node "$T_/sheet.cjs" "$HTML" "$WORK/sheet" $DUR 0.125 $W $H "$Q";;
   quick|preview|final)

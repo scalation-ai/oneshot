@@ -1,13 +1,16 @@
-// How a soundtrack sounds, in numbers you can read without ears: node listen.cjs <film.wav|.mp4> [reference.wav|.mp4|.mov]
+// How a soundtrack sounds, in numbers you can read without ears:
+//   node listen.cjs <film.wav|.mp4> [reference.wav|.mp4|.mov] [--own]
 // hits a second   distinct sounds that start (spectral flux peaks, 60 ms apart at least): a busy track has many
-// low end         the share of the energy under 150 Hz: a groove that carries a film puts most of it there
+// low end         the share of the energy under 150 Hz: the kick and the bass
 // mud             150 to 600 Hz, where a voice, pads and stacked notes pile up
 // dings           frames where one narrow pitch above 1 kHz stands far over the rest (bells, pops, marimbas, ticks),
 //                 the last 3 s (the end card's sonic logo) left out
 // loudness       BS.1770 integrated loudness in LUFS and the true peak in dBTP (lib/sfx.js loudness), beside the other
 //                 films of the series (the .wav files next to a film's .wav), so no film plays louder than the rest
 // With a reference (a film whose sound the user likes), each number is printed beside the reference's, and the
-// verdicts are judged against it; without one, against a launch film measured for the skill.
+// verdicts are judged against it. --own: the reference is the film's own track alone (film.sh listen writes it), so
+// the verdicts judge what the score adds on top of the music: the track's own sound is the producer's choice. Without
+// either (or with no music), against a launch film measured for the skill.
 // ffmpeg comes from ffmpeg-static, or $FFMPEG.
 'use strict';
 const { execFileSync } = require('child_process');
@@ -67,9 +70,11 @@ function measure(file) {
   return { dur, hits: hits.length / dur, low: pct(band[0]), mud: pct(band[1]), dings: 100 * dingFrames / frames, per2, ding2: ding2.map(n => Math.round(100 * n / (2 * SR / HOP))), ...loud(file) };
 }
 
-const [file, ref] = process.argv.slice(2);
-if (!file) { console.error('usage: node listen.cjs <film.wav|.mp4> [reference]'); process.exit(1); }
-const A = measure(file), R = ref ? { ...measure(ref), name: path.basename(ref) } : BASE;
+const args = process.argv.slice(2), OWN = args.includes('--own'), [file, ref] = args.filter(a => a !== '--own');
+if (!file) { console.error('usage: node listen.cjs <film.wav|.mp4> [reference] [--own]'); process.exit(1); }
+const A = measure(file);
+let R = ref ? { ...measure(ref), name: OWN ? "the film's own track alone" : path.basename(ref) } : BASE;
+if (!isFinite(R.lufs)) R = BASE;   // a film with no music
 const f1 = v => v.toFixed(1).padStart(6), f2 = v => v.toFixed(2).padStart(6);
 console.log(`${path.basename(file)}: ${A.dur.toFixed(1)} s, against ${R.name}`);
 console.log(`              this   reference`);
@@ -87,13 +92,13 @@ const series = /\.wav$/i.test(file) ? fs.readdirSync(path.dirname(path.resolve(f
   .map(f => ({ f: f.slice(0, -4), lufs: loud(path.join(path.dirname(path.resolve(file)), f)).lufs })).filter(s => isFinite(s.lufs)) : [];
 if (series.length) console.log(`the series    ${series.map(s => `${s.f} ${s.lufs.toFixed(1)}`).join(', ')}`);
 const out = [];
-if (A.hits > R.hits * 1.3) out.push(`BUSY: ${A.hits.toFixed(2)} hits a second against ${R.hits.toFixed(2)}. Cut sounds on top of the music; let the groove be the rhythm.`);
-if (A.low < R.low - 15) out.push(`THIN: ${A.low.toFixed(0)}% of the energy is under 150 Hz against ${R.low.toFixed(0)}%. The kick and the bass carry a film: the drive mood, or raise them.`);
+if (A.hits > R.hits * 1.3) out.push(`BUSY: ${A.hits.toFixed(2)} hits a second against ${R.hits.toFixed(2)}. Cut sounds on top of the music; let the music be the rhythm.`);
+if (A.low < R.low - 15) out.push(`THIN: ${A.low.toFixed(0)}% of the energy is under 150 Hz against ${R.low.toFixed(0)}%. Sounds on top are covering the music's low end: fewer, or lower.`);
 if (A.mud > R.mud + 12) out.push(`MUDDY: ${A.mud.toFixed(0)}% sits at 150 to 600 Hz against ${R.mud.toFixed(0)}%: a voice, pads and stacked notes on top of each other.`);
 if (A.dings > Math.max(10, R.dings * 1.5)) out.push(`DINGY: ${A.dings.toFixed(0)}% of frames carry a bright pitched note against ${R.dings.toFixed(0)}%. Keep pitched hits (pop, bell, marimba, blip, tick) for the sonic logo.`);
 if (A.tp > -1) out.push(`PEAKS: ${A.tp.toFixed(2)} dBTP. Over -1 the AAC in the film clips: write the soundtrack again (the master holds -1.5), or lower a track.`);
 if (A.lufs > -10) out.push(`LOUD: ${A.lufs.toFixed(1)} LUFS. The platforms turn it down to about -14 anyway: M.write(out, { lufs: -14 }) sets it there.`);
-if (A.lufs < -18) out.push(`QUIET: ${A.lufs.toFixed(1)} LUFS. It plays under the feed around it, and not every platform turns it up: raise the groove or the track.`);
+if (A.lufs < -18) out.push(`QUIET: ${A.lufs.toFixed(1)} LUFS. It plays under the feed around it, and not every platform turns it up: raise the music (music()'s gain).`);
 const all = [A.lufs, ...series.map(s => s.lufs)], lo = Math.min(...all), hi = Math.max(...all);
 if (series.length && hi - lo > 2) out.push(`SERIES: its films play from ${lo.toFixed(1)} to ${hi.toFixed(1)} LUFS, ${(hi - lo).toFixed(1)} apart. Give every film's score the same M.write(out, { lufs: ${Math.max(-16, Math.floor(lo))} }), which only turns a film down.`);
 console.log(out.length ? out.map(s => 'WARN ' + s).join('\n') : 'PASS: as clean as the reference');

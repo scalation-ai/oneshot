@@ -81,7 +81,7 @@
     - Sound, clean: the listen report passes; every element sound in the score is a recording
       (`sample`, `typing`, `cue`, `sonic_logo`), never a synthesized `key`, `pop`, `blip`, `tick`,
       `thock`, `marimba` or `glide`; about one sound on top a bar, none pitched but the logo's ding;
-      a break in the groove before the reveal that matters most.
+      the track's drop on the reveal that matters most, quieter bars (a build or a break) before it.
     - A film with a voice: each clip starts as its words appear and ends before they leave (no
       warning in its voice report), and no two clips run into each other.
 
