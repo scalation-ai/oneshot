@@ -1,72 +1,77 @@
 # Sound
 
 Every film has its own score, `films/<id>.score.cjs`, written by `engine/lib/sfx.js` (plain
-JavaScript, 48 kHz stereo, seeded so the same score always writes the same file): a groove synthesized
-note by note, and on top of it a few recorded element sounds from `engine/sounds/` (CC0). No stock
-music, no generated tracks (a track the user supplies is the one exception: Moods and cues): each sound
-sits on the frame it belongs to, because the score reads the same timeline as the picture.
+JavaScript, 48 kHz stereo): a real track, cut on its bar lines, and on top of it a few recorded element
+sounds from `engine/sounds/` (CC0). Each sound sits on the frame it belongs to, because the score reads
+the same timeline as the picture, and the film is at the track's tempo, so its bars are the track's.
+
+## The music
+
+**A track the user brings comes first:** `film.sh new <id> ... --music <file>`, or later `film.sh <id>
+music <file>` (WAV, MP3, M4A or anything ffmpeg reads). Only one they may use in a published video: their
+own, or licensed for it. Ask where it came from and write it into its licence file, `music/<name>.LICENSE.txt`.
+
+**Otherwise a track from the catalogue,** `engine/data/music.json`: instrumental tracks dedicated to the
+public domain (CC0 1.0), each licence read on its own Free Music Archive page. No credit is needed.
+`film.sh music [mood]` lists them with their tempo, moods and drop; `film.sh new` picks one of the film's
+mood that the last film did not use. The track is fetched into the project's `music/` and kept only if
+every byte matches the catalogue's sha256; its licence file is written beside it, and a fresh checkout
+fetches it again on the next `audio`. Never fetch music from anywhere else: a track not in the catalogue
+comes from the user. To add one to the catalogue, read its licence on its own page, then add its row with
+its size and sha256.
+
+`film.sh <id> music` prints the film's track bar by bar: its tempo, where its first bar line falls, how loud
+each bar is, and the bars where it rises (`up`), thins (`down`) and `drop`s. `film.sh <id> music <track>`
+gives the film another; a film at another tempo moves to the track's (its bars stay, their length changes,
+its seconds round to whole bars). A measured tempo can be half or double the felt one: a 166 BPM lo-fi track
+may feel like 83. Check the drop it found against the bar list.
 
 ## A score
 
-    const { Mix, bed, cue, sample, sonic_logo } = require('sfx');
+    const { Mix, music, cue, sample, sonic_logo } = require('sfx');
 
-    const BPM = 128, B = 60 / BPM, BAR = 4 * B, BARS = 16, DUR = BARS * BAR;   // the film's own grid
+    const BPM = 160, B = 60 / BPM, BAR = 4 * B, BARS = 15, DUR = BARS * BAR;   // the track's tempo, the film's bars
     const TB = n => n * BAR;
     const M = new Mix(DUR);
-    const REVEAL = TB(6);                                               // copy the film's event times, by name
-    bed(M, 'drive', { bpm: BPM, bars: BARS, key: 2, variant: 1,         // the groove carries the film,
-      breaks: [[REVEAL - 2 * B, REVEAL]] });                            // and stops dead for two beats before the reveal
-    [TB(10)].forEach(t => cue(M, 'cut', t));                           // the style's sound on a change the music does not mark
-
-    M.add(sample('impact/boom'), REVEAL, 0.26);                         // the reveal: the groove drops back in, with weight
+    music(M, 'launch', { cut: [[0, 13, 3], [3, 16, 8], [11, 13, 2], [13, 16, 2]] });
+    const REVEAL = TB(3);                                               // copy the film's event times, by name
+    [TB(7)].forEach(t => cue(M, 'cut', t));                             // the style's sound on a change the music does not mark
+    M.add(sample('impact/boom'), REVEAL, 0.22);                         // the reveal, on the drop
     M.add(sample('ui/toggle'), TB(8) + 2 * B, 0.24);                    // the one sound the feature itself makes, once
-    sonic_logo(M, TB(15) + 0.75 * B, TB(15) + 1.5 * B);                 // the end card: the dot lands, then the chime
-    M.write(process.argv[2] || 'film.wav');
+    sonic_logo(M, TB(14) + 0.75 * B, TB(14) + 1.5 * B);                 // the end card: the dot lands, then the chime
+    M.write(process.argv[2] || 'film.wav', { lufs: -14 });
 
-`film.sh new` writes a starting score in the mood, key and style it picked: the groove, a cue on each
-change of scene, sounds for the template's own events and the sound signature on the end card.
-Replace the events with the film's own. `film.sh <id> audio` writes the soundtrack; `film.sh <id>
-onsets` lists its strongest hits next to the bar lines. (`film.sh` puts the sound kit on `NODE_PATH`,
-which is why `require('sfx')` works from the project.)
+`film.sh new` writes a starting score in the style it picked: the music with its drop on the second
+scene, a cue on each change of scene, sounds for the template's own events and the sound signature on the
+end card. Replace the events with the film's own. `film.sh <id> audio` writes the soundtrack; `film.sh
+<id> onsets` lists its strongest hits next to the bar lines. (`film.sh` puts the sound kit on
+`NODE_PATH`, which is why `require('sfx')` works from the project.)
 
-## Moods and cues
+## Cutting the track
 
-`bed(M, mood, { bpm, bars, key, variant, from, breaks })` lays the groove from bar `from` (0 by default)
-to the end card, and a closing chord on it. `key` is semitones from C (G, A, C, D or E: the keys the
-signature's chime sits well in), `variant` 0 or 1 a second chord progression; `film.sh new` picks both,
-so two films of one mood differ. `from: 2` leaves the first two bars to the film's own sounds (a prompt
-typed in a quiet room) and drops the groove in on bar 2's downbeat: put the event it answers there (the
-send), with a riser into it and a crash and a low boom on it.
+`music(M, id, { drop, cut, gain, fadeIn, fadeOut, breaks })` lays the film's track. `drop: n` puts the
+track's drop on film bar `n` and plays its own lead-in under the bars before. `cut` shapes it freely: a list
+of `[film bar, track bar, bars]`, track bars counted as `film.sh <id> music` prints them. The cut in the
+score above, on a 160 BPM track that breaks on bars 13 to 15 and drops on 16:
 
-`breaks: [[t0, t1], ...]` cuts the groove dead between those seconds (a 30 ms fade out, back on the beat
-at `t1`; tails ring on): the event inside the silence is heard alone, and the groove dropping back in is
-the reveal's sound. Put one before each reveal that matters (the next film growing out of the pill, the
-logo landing), a beat or two long, ending on a downbeat:
+    [0, 13, 3]    film bars 0-2: the break, quiet, under the prompt being typed
+    [3, 16, 8]    film bars 3-10: the drop as the product answers, then every scene after it
+    [11, 13, 2]   film bars 11-12: the break again, under the promise line
+    [13, 16, 2]   film bars 13-14: the drop again on the end card, faded out over the last 1.5 s
 
-    bed(M, 'drive', { bpm: 120, bars: 13, from: 2, breaks: [[11, 12], [15, 16], [21, 22]] });
-    [12, 16].forEach(t => M.add(reverse_swell(0.4), t - 0.4, 0.07));   // a breath into the drop, nothing more
+Every splice is on a bar line, with 6 ms fades, so it is not heard as an edit. The track's own loud and
+quiet bars keep their difference: that contrast is what makes a drop land, so never level it. Put the
+quiet bars (an intro, a build, a break) under the set-up, and the drop on the reveal that matters most.
+A film that opens on the drop has nowhere left to go.
 
-**A track the user supplies** replaces `bed`: `track(M, 'music/launch.mp3', { from: 12.5, at: 0, breaks })`
-(a path from the score's folder; WAV, MP3, M4A or anything ffmpeg reads, kept in stereo). `from` is where in
-the file the film starts, `at` where on the film it comes in, `until` where it stops (the film's end), with a
-`fadeOut` (1.5 s) and `fadeIn` (0.02). It is laid on the groove's bus: a voice ducks it as deep as a groove,
-and `breaks` stop it dead the same way. It comes in at a groove's loudness, under the film's events; `gain`
-sets it from there. A finished track is denser than a groove, so the film comes out louder: give the score
-`M.write(out, { lufs: -14 })` (see Mix and checks). Then cut the picture to its downbeats and its drop, not
-to a tempo of your choosing: `film.sh <id> onsets` lists its strongest hits beside the bar lines.
+`breaks: [[t0, t1], ...]` stops the track dead between those seconds (a 30 ms fade out, back at `t1`):
+the event inside the silence (a send, the logo landing) is heard alone, and the music coming back is the
+reveal's sound. A beat or two, ending on a downbeat. A break in the track itself usually does it better.
 
-Only a track the user gave you, for this film, after they confirm they may use it in a published video
-(their own, or licensed for it). Never download or pick one yourself. Write its source and licence in a
-comment at the top of the score and in the script.
-
-    drive     the launch film's groove: a kick on every beat with the weight in the low end, a snare on
-              2 and 4, a bass on the offbeats, chords, a crash every 4 bars, a quiet top. 112 to 128 BPM
-    calm      soft pads, a low sub, a sparse marimba; a heartbeat kick from bar 3. 96 to 112 BPM
-    upbeat    bright pads, four soft kicks a bar, offbeat hats, shaker, claps, an octave bass. 120 to 128
-    bold      minor chords, a hard kick on every beat, claps, driving bass, a crash every 4 bars. 128 to 144
-    playful   a marimba riff from frame 1, light kicks, a pop on the last eighth, a bouncing bass. 112 to 128
-    minimal   no drums: a swell, a low note, a quiet clock on the beat; the few recorded sounds on top
-              stand out over it. 96 to 120
+The track is set to -16 LUFS before `gain` (1 keeps it there), under the film's events. A finished track is
+dense, so give the score `M.write(out, { lufs: -14 })` and every film of the series the same (see Mix and
+checks). `track(M, file, { from, at, until, ... })` lays a file as it is, uncut, for a sound the score
+names itself. A film whose music is `none` (`film.sh <id> music none`) has only its own sounds.
 
 `cue(M, kind, t, gain)` is the sound of a change of scene at `t`, from the recorded sounds: `push`
 (glide) a swoosh through the move, `cut` (punch) a dry thump and a click on the downbeat, `zoom` (dive)
@@ -109,20 +114,19 @@ its end lands on the drop. Add a sound only from a CC0 source, with its row in `
 
 `const M = new Mix(seconds)`. `M.add(signal, t, gain, { pan, rev })` places a sound at `t` seconds, `pan`
 from -1 (left) to 1 (right), `rev` the reverb send from 0 to 1. `M.pump(t, depth, tau)` ducks the whole
-mix for a beat (the groove's breathing, or room for a hit). `M.write(path)` masters to a peak of about
+mix for a beat (room for a hit). `M.write(path)` masters to a peak of about
 -1 dBFS and prints the peak and RMS.
 
-## The instruments (the groove's)
+## The synthesized hits
 
-These are synthesized: right for the music under a film, wrong for its element sounds, which are the
-recordings above. A film whose effects were all `key`, `pop`, `blip` and `marimba` sounded cheap however
-well it was timed.
+The old kit, for what no recording covers. Wrong for a film's element sounds, which are the recordings
+above: a film whose effects were all `key`, `pop`, `blip` and `marimba` sounded cheap however well it was
+timed.
 
     drums     kick({ big, soft })  clap()  hat({ open })  shaker(d)  crash(d)  sub_boom(d, f0, f1)
     motion    whoosh(d, f_lo, f_hi, up, shape)  riser(d, f0, f1)  reverse_swell(d)  glide(f0, f1, d)
     hits      blip(f)  tick(f, d)  pop(f0, f1, d)  thock(d)  thud(d)  clack(f)  key(d)  buzz(d)
-    tonal     bell(f, d)  marimba(f, d, bright)  sonar(f, d)  pad_chord(notes, d, { cutoff, att, rel })
-              bass_note(f, d)  sub_note(f, d)  odometer(d, n)
+    tonal     bell(f, d)  marimba(f, d, bright)  sonar(f, d)  odometer(d, n)
     helpers   hz('A4') a note's frequency; mul(signal, k) and mix(a, b, ...) to scale and sum signals;
               map(n, (t, i) => value) to build one; phaseOf(freqs) for a pitch sweep; lp, hp, bp filters;
               noise, saw, env_adsr; SR the sample rate
@@ -137,14 +141,14 @@ bird's chirp, a fast rising sine with a short tail:
 
 ## Fewer sounds, and the right ones
 
-The music is the soundtrack; a sound on top is the exception. Before adding one, ask whether the groove
+The music is the soundtrack; a sound on top is the exception. Before adding one, ask whether the music
 already says it (a cut on a downbeat needs no thump: the kick is there). What earns a place: keys while a
 line is typed, a soft press on a send, the boom and crash of a drop, one whoosh under a big move, a sound
 that is the feature's own (a phone buzz for a message arriving, a coin for money moving), once in the
 film rather than on every repeat. About one a bar at most.
 
 Never put pitched hits on the film's events: a marimba run as things appear, a pop as each lands, a blip on
-a pin, a glide as a line stretches. Each is pleasant alone; thirty of them over a groove and a voice is the
+a pin, a glide as a line stretches. Each is pleasant alone; thirty of them over a track and a voice is the
 clutter that sent one oneshot film back ("dring, dut, not clean"). `listen` measures it.
 
 **The series signature:** every film closes on the same sound as the dot lands in the wordmark
@@ -188,7 +192,7 @@ s shows each line for a bar only: keep those lines to three or four words, or pi
 Never run two lines' voices into each other; the report says when one does.
 
 **In the score,** `voice(M, '<id>')` (the template writes it) places the clips, centred and dry, every
-line at one loudness. The groove ducks 10 dB around each clip, the film's events 3 dB (so a tap still
+line at one loudness. The music ducks 10 dB around each clip, the film's events 3 dB (so a tap still
 reads under a word), and the voice sits 10 dB above the music under it: `voice(M, id, { duck, over })`
 changes either. `film.sh <id> audio` runs the voice step first; `onsets` measures the music without
 the voice and lists the clips and the strong hits that land under a word.
@@ -210,24 +214,26 @@ all how it says the brand's name and the numbers.
   low-passed, gentle saturation only. A film with a voice sits near -17 dBFS: the voice's peaks set the level.
 - **Loudness, in LUFS** (BS.1770, as the platforms measure it). YouTube, Spotify and most feeds play
   everything at about -14 LUFS: a louder film is turned down, and a quieter one is not always turned up.
-  The moods come out between about -12 (drive) and -17 (minimal); a supplied track, louder. Two films of
+  A track comes in at -16, and a dense one plays louder once the events are on top. Two films of
   one series more than 2 LU apart play at different volumes next to each other: give every film's score
   the same `M.write(out, { lufs: -16 })` (the series' quietest, -14 at most), which only turns a film down,
   never up into its peaks. The score prints its LUFS and true peak each time it writes, the preview and
   the final print their AAC's.
-- **`film.sh <id> listen` must PASS.** It reads the soundtrack in four numbers against a launch film
-  measured for the skill (or against `REF=<clip>`, any film whose sound the user likes):
+- **`film.sh <id> listen` must PASS.** It reads the soundtrack in four numbers beside the film's own
+  track alone, so what it judges is what the score adds on top: the track's sound is its producer's, and a
+  lo-fi track is muddier than an electro one by nature (or against `REF=<clip>`, any film whose sound the
+  user likes; a film with no music, against a launch film measured for the skill):
 
-      hits a second   distinct sounds starting (the reference: 2.7). BUSY above 1.3 times it: cut sounds on top
-      low end         energy under 150 Hz (68%). THIN 15 points below: the kick and bass carry a film
-      mud             energy at 150 to 600 Hz (18%). MUDDY 12 points above: a voice, pads, stacked notes
-      dings           frames where one bright pitch stands out, the end card left out (8%). DINGY above 10% or 1.5 times it
+      hits a second   distinct sounds starting. BUSY above 1.3 times the track's: cut sounds on top
+      low end         energy under 150 Hz. THIN 15 points below the track's: sounds on top cover its low end
+      mud             energy at 150 to 600 Hz. MUDDY 12 points above: a voice, pads, stacked notes
+      dings           frames where one bright pitch stands out, the end card left out. DINGY above 10% or 1.5 times it
       LUFS            loudness. LOUD above -10, QUIET under -18; SERIES when the project's films are more than 2 LU apart
       true peak       PEAKS over -1 dBTP: it clips once it is AAC
 
   It also prints both per two seconds, so a busy or dingy stretch points at the lines of the score
   that make it. The sonic logo's chime is expected to show in the last two seconds.
-- **The groove is louder than the events.** `onsets` lists the strongest hits: the kick on the bar
+- **The music is louder than the events.** `onsets` lists the strongest hits: the kick on the bar
   lines, the drops, the logo. An event that needs to be louder than the music is an event that
   needs a break before it.
 - **Every film must work with the sound off.** Most plays start muted (feeds, email previews,

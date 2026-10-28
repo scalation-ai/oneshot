@@ -1,5 +1,5 @@
 /* The film sound kit: recorded element sounds (a real keyboard, swooshes, impacts, UI tones: sample(), typing()),
-   synthesized instruments for the groove (pads, bass, drums and more), a two-bus mixer (dry + reverb send), a master and a
+   the film's music cut on its bar lines (music(), track()), synthesized hits, a two-bus mixer (dry + reverb send), a master and a
    48 kHz 16-bit stereo writer, and the sonic logo that closes every film of a series. A film with a
    voice adds its narrator's clips on their own bus, with the music ducked under them.
    A score requires it:  const { Mix, hz, kick, ... } = require('sfx');   (film.sh puts it on NODE_PATH)
@@ -186,18 +186,6 @@ function odometer(d, n = 14) {
   return out;
 }
 
-// ---------------------------------------------------------------- tonal
-function pad_chord(notes, d, { cutoff = 1800, att = 0.25, rel = 0.4 } = {}) {
-  const n = N_(d), x = zeros(n);
-  for (const f of notes) for (const dc of [-7, 0, 7]) { const s = saw(f, d, dc); for (let i = 0; i < n; i++) x[i] += s[i]; }
-  const y = lp(x, cutoff, 2), e = env_adsr(n, att, 0.3, 0.8, rel, d), g = 2.2 / (notes.length * 3);
-  return y.map((v, i) => v * g * e[i]);
-}
-function bass_note(f, d, cut = 420) {
-  const n = N_(d), s = saw(f, d, 0, 0), x = lp(map(n, (t, i) => s[i] * 0.7 + Math.sin(PI2 * f * t) * 0.8), cut, 2);
-  return x.map((v, i) => { const t = i / SR; return Math.tanh(v * Math.min(1, t / 0.004) * Math.exp(-t / 0.13) * 1.4) * 0.9; });
-}
-function sub_note(f, d) { const n = N_(d), e = env_adsr(n, 0.01, 0.1, 0.8, 0.08, d); return map(n, (t, i) => Math.sin(PI2 * f * t) * e[i] * 0.9); }
 
 // ---------------------------------------------------------------- the mixer
 function fft(re, im, inv) {
@@ -248,23 +236,24 @@ class Mix {
   constructor(dur) { this.N = roundEven(dur * SR); this.dur = dur; this.L = zeros(this.N); this.R = zeros(this.N); this.RL = zeros(this.N); this.RR = zeros(this.N); this.duck = new Float64Array(this.N).fill(1); }
   // place a sound at t seconds: gain, pan -1 (left) to 1 (right), rev the reverb send 0 to 1
   add(sig, t, gain = 1.0, { pan = 0.0, rev = 0.0 } = {}) {
+    if (process.env.MUSICONLY && this.bus !== 'music') return;   // MUSICONLY=1: the track alone, for film.sh listen
     let i = roundEven(t * SR); if (i >= this.N) return;
     const a = Math.sqrt(0.5 * (1 - pan)) * 1.4142, b = Math.sqrt(0.5 * (1 + pan)) * 1.4142;
     let off = 0; if (i < 0) { off = -i; i = 0; }
     const j = Math.min(this.N, i + sig.length - off);
     for (let k = i; k < j; k++) { const v = sig[k - i + off] * gain; this.L[k] += v * a; this.R[k] += v * b; if (rev) { this.RL[k] += v * rev * a; this.RR[k] += v * rev * b; } }
-    // bed() marks its sounds, and a copy of them is kept: under a voice the groove ducks deeper than the film's events
-    if (this.bus === 'bed') { const G = this.bed || (this.bed = { L: zeros(this.N), R: zeros(this.N), RL: zeros(this.N), RR: zeros(this.N) });
+    // music() and track() mark their sounds, and a copy of them is kept: under a voice the music ducks deeper than the film's events
+    if (this.bus === 'music') { const G = this.mus || (this.mus = { L: zeros(this.N), R: zeros(this.N), RL: zeros(this.N), RR: zeros(this.N) });
       for (let k = i; k < j; k++) { const v = sig[k - i + off] * gain; G.L[k] += v * a; G.R[k] += v * b; if (rev) { G.RL[k] += v * rev * a; G.RR[k] += v * rev * b; } } }
-    // a break in the groove: its sounds are cut from a break's start to its end (bed's breaks)
-    if (this.bus === 'bed' && this.gates) { const fade = N_(0.03);
+    // a break in the music: its sounds are cut from a break's start to its end (music's breaks)
+    if (this.bus === 'music' && this.gates) { const fade = N_(0.03);
       for (const [g0, g1] of this.gates) { const s = roundEven(g0 * SR), e = roundEven(g1 * SR);
         for (let k = Math.max(i, s - fade); k < Math.min(j, e); k++) { const w = k < s ? (s - k) / fade : 0, v = sig[k - i + off] * gain * (1 - w);
-          for (const X of this.bed ? [this, this.bed] : [this]) { X.L[k] -= v * a; X.R[k] -= v * b; if (rev) { X.RL[k] -= v * rev * a; X.RR[k] -= v * rev * b; } } } } }
+          for (const X of this.mus ? [this, this.mus] : [this]) { X.L[k] -= v * a; X.R[k] -= v * b; if (rev) { X.RL[k] -= v * rev * a; X.RR[k] -= v * rev * b; } } } } }
   }
-  // duck the whole mix from t (the groove's breathing, or room for a hit)
+  // duck the whole mix from t (room for a hit)
   pump(t, depth = 0.4, tau = 0.09) { const i0 = roundEven(t * SR); if (i0 >= this.N) return;
-    if (this.bus === 'bed' && this.gates && this.gates.some(([g0, g1]) => t >= g0 - 0.03 && t < g1)) return;   // no breathing in a break
+    if (this.bus === 'music' && this.gates && this.gates.some(([g0, g1]) => t >= g0 - 0.03 && t < g1)) return;   // no breathing in a break
     for (let k = i0; k < this.N; k++) this.duck[k] = Math.min(this.duck[k], 1 - depth * Math.exp(-((k - i0) / SR) / tau)); }
   // the master: the mix's peaks at -1 dBFS, then down until its true peak is under -1.5 dBTP, so the AAC in the film stays
   // under -1 (the encoder adds up to about 0.2 dB). lufs: a loudness to bring it down to (-14, the platforms'), never up:
@@ -278,13 +267,13 @@ class Mix {
     let dL = this.L.map((v, i) => v * (0.55 + 0.45 * this.duck[i]) + wl[i] * wet), dR = this.R.map((v, i) => v * (0.55 + 0.45 * this.duck[i]) + wr[i] * wet);
     let vo = null;
     if (V && V.clips.length) {
-      // the music under the voice: the groove down `duck` dB, the events a third of that, around every clip
+      // under the voice: the music down `duck` dB, the events a third of that, around every clip
       const d = zeros(N), att = N_(0.12), rel = N_(0.35), gap = N_(0.6), spans = [];
       for (const c of V.clips) { const s = roundEven(c.t * SR), e = s + c.x.length, p = spans[spans.length - 1];
         if (p && s - p[1] < gap) p[1] = Math.max(p[1], e); else spans.push([s, e]); }
       for (const [s, e] of spans) for (let i = Math.max(0, s - att); i < Math.min(N, e + rel); i++)
         d[i] = Math.max(d[i], i < s ? 0.5 - 0.5 * Math.cos(Math.PI * (i - s + att) / att) : i < e ? 1 : 0.5 + 0.5 * Math.cos(Math.PI * (i - e) / rel));
-      const kb = 1 - Math.pow(10, -V.duck / 20), ke = 1 - Math.pow(10, -V.duck / 60), G = this.bed;
+      const kb = 1 - Math.pow(10, -V.duck / 20), ke = 1 - Math.pow(10, -V.duck / 60), G = this.mus;
       const gbl = G ? fftconvolve(hp(G.RL, 250), irl, N) : null, gbr = G ? fftconvolve(hp(G.RR, 250), irr, N) : null;
       const under = (x, gl, gw) => x.map((v, i) => { const b = G ? gw[i] * wet + gl[i] * (0.55 + 0.45 * this.duck[i]) : 0;
         return (v - b) * (1 - ke * d[i]) + b * (1 - kb * d[i]); });
@@ -320,108 +309,69 @@ class Mix {
   }
 }
 
-// ---------------------------------------------------------------- moods: the groove under a film
-// bed(M, mood, { bpm, bars, key, variant, from }) lays a mood's chords, bass and drums from bar `from` (0 by default) to the
-// end card's bar, and a closing chord on the end card. A `from` after 0 leaves the bars before it silent, so the music
-// can drop in on an event (the prompt sent), not on frame 1. mood: calm, upbeat, bold, playful, minimal or drive. key: semitones from C (-5 to 6), variant
-// 0 or 1 (a second chord progression): film.sh new picks both, so two films of one mood differ. The film's own
-// events go on top, louder than the groove.
-const tr = (note, k) => hz(note) * Math.pow(2, (k || 0) / 12);
-const PROG = {
-  calm: [[['C3', 'G3', 'B3', 'E4'], ['A2', 'E3', 'G3', 'C4'], ['F2', 'C3', 'E3', 'A3'], ['G2', 'D3', 'G3', 'B3']],
-         [['F2', 'C3', 'E3', 'A3'], ['E2', 'B2', 'D3', 'G3'], ['D2', 'A2', 'C3', 'F3'], ['G2', 'D3', 'F3', 'B3']]],
-  upbeat: [[['C3', 'G3', 'C4', 'E4'], ['B2', 'G3', 'B3', 'D4'], ['A2', 'E3', 'G3', 'C4'], ['F2', 'C3', 'F3', 'A3']],
-           [['A2', 'E3', 'A3', 'C4'], ['F2', 'C3', 'F3', 'A3'], ['C3', 'G3', 'C4', 'E4'], ['G2', 'D3', 'G3', 'B3']]],
-  bold: [[['A2', 'E3', 'A3', 'C4'], ['F2', 'C3', 'F3', 'A3'], ['C3', 'G3', 'C4', 'E4'], ['G2', 'D3', 'G3', 'B3']],
-         [['E2', 'B2', 'E3', 'G3'], ['C3', 'G3', 'C4', 'E4'], ['G2', 'D3', 'G3', 'B3'], ['D3', 'A3', 'D4', 'F#4']]],
-  playful: [[['C3', 'E3', 'G3', 'A3'], ['F2', 'A2', 'C3', 'D3'], ['A2', 'C3', 'E3', 'G3'], ['G2', 'B2', 'D3', 'E3']],
-            [['F2', 'A2', 'C3', 'E3'], ['G2', 'B2', 'D3', 'F3'], ['E2', 'G2', 'B2', 'D3'], ['A2', 'C3', 'E3', 'G3']]],
-  minimal: [[['C3', 'G3', 'D4'], ['C3', 'G3', 'D4'], ['A2', 'E3', 'B3'], ['A2', 'E3', 'B3']],
-            [['F2', 'C3', 'G3'], ['F2', 'C3', 'G3'], ['C3', 'G3', 'D4'], ['C3', 'G3', 'D4']]],
-};
-const CLOSE = { drive: ['C3', 'G3', 'C4', 'E4', 'G4'], calm: ['C3', 'G3', 'D4', 'E4', 'B4'], upbeat: ['C3', 'G3', 'C4', 'E4', 'G4'], bold: ['A2', 'E3', 'B3', 'C4', 'E4'],
-  playful: ['C3', 'G3', 'A3', 'D4', 'E4'], minimal: ['C3', 'G3', 'D4'] };
-const oct = (note, n) => note.slice(0, -1) + (+note.slice(-1) + n);
-// breaks: [[t0, t1], ...] seconds where the groove stops dead (a 30 ms fade out, back on the beat at t1), so the event in
-// the silence (a prompt typed, a send, the logo's landing) is heard alone and the drop after it lands. Tails ring on.
-function bed(M, mood, opt = {}) { M.bus = 'bed'; M.gates = opt.breaks || null; try { layBed(M, mood, opt); } finally { M.bus = null; M.gates = null; } }
-function layBed(M, mood, { bpm, bars, key = 0, variant = 0, from = 0 } = {}) {
-  const P = PROG[mood === 'drive' ? 'upbeat' : mood]; if (!P) throw new Error(`bed: unknown mood "${mood}" (calm, upbeat, bold, playful, minimal or drive)`);
-  const B = 60 / bpm, BAR = 4 * B, TB = n => n * BAR, last = bars - 1, prog = P[variant % 2], F = n => tr(n, key);
-  for (let b = from; b < last; b++) {
-    const ch = prog[b % 4], root = oct(ch[0], -1), t0 = TB(b);
-    if (mood === 'calm') {
-      M.add(pad_chord(ch.map(F), BAR, { cutoff: 1300, att: b ? 0.6 : 0.02, rel: 0.8 }), t0, 0.24, { rev: 0.5 });
-      M.add(sub_note(F(root), BAR * 0.95), t0, 0.2);
-      if (b > 0) { [0, 1.5, 2, 3].forEach((k, i) => M.add(marimba(F(oct(ch[(i + 1) % ch.length], 1)), 0.9, 0.6), t0 + k * B, 0.075, { pan: i % 2 ? 0.25 : -0.25, rev: 0.45 }));
-        for (let k = 0; k < 8; k++) M.add(shaker(), t0 + k * B / 2, 0.022, { pan: -0.3 }); }
-      if (b > 1) { M.add(kick({ soft: true }), t0, 0.3); M.pump(t0, 0.15); }
-    } else if (mood === 'upbeat') {
-      M.add(pad_chord(ch.map(F), BAR, { cutoff: 2300, att: b ? 0.05 : 0.02 }), t0, 0.2, { rev: 0.35 });
-      if (b === 0) { M.add(bass_note(F(root), B * 0.9), t0, 0.24); continue; }
-      for (let k = 0; k < 4; k++) { const tk = t0 + k * B;
-        M.add(kick({ soft: true }), tk, 0.4); M.pump(tk, 0.3);
-        M.add(hat({ open: k % 2 === 1 }), tk + B / 2, 0.1, { pan: 0.15 });
-        for (let s = 0; s < 4; s++) M.add(shaker(), tk + s * B / 4, s % 2 ? 0.028 : 0.04, { pan: -0.3 });
-        if (b > 1 && k % 2) M.add(clap(), tk, 0.07, { rev: 0.2 });
-        M.add(bass_note(F(root), B * 0.42), tk, 0.24); M.add(bass_note(F(oct(root, 1)), B * 0.42), tk + B / 2, 0.16); }
-    } else if (mood === 'bold') {
-      M.add(pad_chord(ch.map(F), BAR, { cutoff: 1700, att: b ? 0.08 : 0.02 }), t0, 0.2, { rev: 0.3 });
-      if (b === 0) { M.add(sub_boom(1.3, 62, 32), t0, 0.3); continue; }
-      if (b % 4 === 0) { M.add(crash(1.4), t0, 0.07, { rev: 0.3 }); M.add(sub_boom(1.1, 60, 32), t0, 0.22); }
-      if (b % 4 === 3 && b + 1 < last) M.add(reverse_swell(BAR / 2), t0 + BAR / 2, 0.1);
-      for (let k = 0; k < 4; k++) { const tk = t0 + k * B;
-        M.add(kick(), tk, 0.42); M.pump(tk, 0.4);
-        if (k % 2) M.add(clap(), tk, 0.1, { rev: 0.25 });
-        M.add(hat(), tk, 0.06, { pan: 0.2 }); M.add(hat(), tk + B / 2, 0.1, { pan: 0.2 });
-        M.add(bass_note(F(root), B * 0.45, 700), tk, 0.28); M.add(bass_note(F(root), B * 0.45, 700), tk + B / 2, 0.22); }
-    } else if (mood === 'playful') {
-      M.add(pad_chord(ch.map(F), BAR, { cutoff: 1800, att: b ? 0.1 : 0.02 }), t0, 0.14, { rev: 0.4 });
-      const run = [0, 2, 3, 1, 3, 2, 1, 2].map(i => oct(ch[i % ch.length], 2));
-      run.forEach((nn, k) => M.add(marimba(F(nn), 0.5, 1), t0 + k * B / 2, b ? 0.075 : 0.05, { pan: k % 2 ? 0.3 : -0.3, rev: 0.3 }));
-      M.add(bass_note(F(root), B * 0.8), t0, 0.24); M.add(bass_note(F(oct(ch[2], -1)), B * 0.8), t0 + 2 * B, 0.2);
-      if (b === 0) continue;
-      [0, 2].forEach(k => { M.add(kick({ soft: true }), t0 + k * B, 0.36); M.pump(t0 + k * B, 0.2); });
-      for (let k = 0; k < 8; k++) M.add(shaker(), t0 + k * B / 2, 0.03, { pan: -0.25 });
-      M.add(pop(900, 320, 0.1), t0 + 3.5 * B, 0.05, { pan: 0.3 });
-      if (b > 1) M.add(clap(), t0 + 3 * B, 0.05, { rev: 0.3 });
-    } else if (mood === 'drive') {   // the launch-film groove: the low end is the music, the top is quiet
-      M.add(pad_chord(ch.map(F), BAR, { cutoff: 2200, att: 0.02, rel: 0.3 }), t0, 0.34, { rev: 0.3 });
-      M.add(sub_note(F(root), BAR * 0.97), t0, 0.12);
-      if (b % 4 === 0 && b > from) M.add(crash(1.4), t0, 0.05, { rev: 0.3 });
-      for (let k = 0; k < 4; k++) { const tk = t0 + k * B;
-        M.add(kick(), tk, 0.5); M.pump(tk, 0.4, 0.11);
-        if (k % 2) { M.add(clap(), tk, 0.2, { rev: 0.18 }); M.add(lp(noise(0.16), 2400).map((v, i) => v * Math.exp(-(i / SR) / 0.05)), tk, 0.16); }
-        M.add(hat(), tk + B / 2, 0.045, { pan: 0.15 });
-        M.add(bass_note(F(root), B * 0.4, 700), tk + B / 2, 0.24); M.add(bass_note(F(oct(root, 1)), B * 0.3, 900), tk + 3 * B / 4, 0.12); }
-    } else {   // minimal: no drums; a swell, a low note, a clock; the film's events carry the sound
-      M.add(pad_chord(ch.map(F), BAR, { cutoff: 1000, att: b ? 1.0 : 0.3, rel: 1.0 }), t0, 0.12, { rev: 0.6 });
-      M.add(sub_note(F(root), BAR * 0.9), t0, 0.16);
-      if (b > 0) for (let k = 0; k < 4; k++) M.add(tick(2200, 0.015), t0 + k * B, k ? 0.02 : 0.03, { pan: 0.1 });
-    }
+// ---------------------------------------------------------------- the music
+// music(M, film, { drop, cut, gain, fadeIn, fadeOut, breaks }) lays the film's music: the track films.json gives it
+// (film.sh <film> music sets one: a track the user brings, or one of the engine's CC0 catalogue), cut on its bar lines.
+// The film is at the track's tempo, so its bars and the track's are the same length, and a cut is a list of
+// [film bar, track bar, bars]: [[0, 7, 1], [1, 16, 6]] plays track bar 7 under film bar 0, then track bars 16-21 under
+// film bars 1-6 (bars counted from the track's first bar line, as film.sh <film> music prints them). Without a cut,
+// `drop` (a film bar) is where the track's drop lands: the bars before it play the track's own lead-in into it,
+// continuous when the track has that many, else from its start with one splice into the drop. Every splice is on a bar
+// line with 6 ms fades, and the music's loud and quiet bars keep their difference: that is what makes a drop land. Then
+// as track(). A film whose music is 'none' has none. A track not in music/ (a fresh checkout) is fetched again.
+function music(M, film, { drop = 0, cut = null, gain = 1, fadeIn = 0.02, fadeOut = 1.5, breaks = null } = {}) {
+  const dir = require.main ? path.dirname(require.main.filename) : process.cwd(), proj = path.dirname(dir);
+  const F = JSON.parse(fs.readFileSync(path.join(proj, 'films.json'), 'utf8'))[film] || {}, I = F.music;
+  if (I === 'none') return;
+  if (!I) throw new Error(`music: ${film} has no music. film.sh music lists the catalogue; film.sh ${film} music <track or file> sets it`);
+  const f = path.join(proj, I.file);
+  if (!fs.existsSync(f)) {
+    const r = require('child_process').spawnSync(process.execPath, [path.join(__dirname, '..', 'tools', 'tracks.cjs'), 'fetch', proj, I.track], { encoding: 'utf8' });
+    if (r.status || !fs.existsSync(f)) throw new Error(`music: ${I.file} is missing${r.stderr ? ': ' + r.stderr.trim() : ''}`);
   }
-  M.add(pad_chord(CLOSE[mood].map(F), BAR, { cutoff: 2600, att: 0.08, rel: 0.5 }), TB(last), 0.34, { rev: 0.5 });
+  if (F.bpm && Math.abs(F.bpm - I.bpm) > 0.01) throw new Error(`music: ${film} is at ${F.bpm} BPM and its track at ${I.bpm}: film.sh ${film} music ${I.track} moves the film to it`);
+  const x = decode(f), n = x.length >> 1, BAR = I.bar, bars = Math.ceil(M.dur / BAR - 1e-6);
+  if (!cut) cut = I.drop >= drop ? [[0, I.drop - drop, bars]] : [[0, 0, drop], [drop, I.drop, bars - drop]];
+  const L = zeros(M.N), R = zeros(M.N), sp = N_(0.006);
+  for (const [fb, tb, nb] of cut) {
+    const s0 = Math.round(fb * BAR * SR), len = Math.min(Math.round(nb * BAR * SR), M.N - s0), src = Math.round((I.firstBar + tb * BAR) * SR);
+    if (src + len > n) console.warn(`music: track bars ${tb}-${tb + nb - 1} run past the end of ${I.file}: silence there`);
+    for (let i = 0; i < len; i++) { const j = src + i; if (j < 0 || j >= n) continue;
+      const e = Math.min(1, (i + 1) / sp, (len - i) / sp); L[s0 + i] += x[2 * j] * e; R[s0 + i] += x[2 * j + 1] * e; }
+  }
+  lay(M, L, R, 0, { gain, fadeIn, fadeOut, breaks });
 }
 
-// track(M, file, { at, from, until, gain, fadeIn, fadeOut, breaks }) lays a piece of music the user supplied (wav, mp3, m4a:
-// anything ffmpeg reads) in place of bed(): from `from` seconds into the file, placed at `at` on the film, cut at `until`
-// (the film's end) with a fade out over `fadeOut` seconds. It is laid on the groove's bus, so a voice ducks it as deep as
-// a groove and `breaks` stop it dead the same way. Its loudness is set to a groove's (-16 LUFS; drive's is -14, calm's -19)
-// before `gain`: 1 keeps it there, under the film's events as bed() is. Only a file the user gave and may use: never
-// fetch one.
+// bed() was the synthesized groove, removed in 0.3.0: a score from before then says how to move to a real track
+function bed() { throw new Error("bed() is gone: a film's music is now a real track. Give the film one (film.sh music lists the catalogue; film.sh <film> music <track or file>), then replace bed(...) in its score with music(M, '<film>', { drop: <the film bar for the track's drop> })"); }
+
+// track(M, file, { at, from, until, gain, fadeIn, fadeOut, breaks }) lays a piece of music as it is (wav, mp3, m4a:
+// anything ffmpeg reads), uncut: from `from` seconds into the file, placed at `at` on the film, cut at `until` (the
+// film's end) with a fade out over `fadeOut` seconds. music() is the usual way; this is for a sound file the score
+// names itself. Both lay it on the music bus, so a voice ducks it deeper than the film's events and `breaks` ([[t0, t1],
+// ...] seconds) stop it dead (a 30 ms fade out, back at t1): the event inside the silence is heard alone. Its loudness
+// is set to -16 LUFS before `gain`: 1 keeps it under the film's events.
 function track(M, file, { at = 0, from = 0, until = M.dur, gain = 1, fadeIn = 0.02, fadeOut = 1.5, breaks = null } = {}) {
   const dir = require.main ? path.dirname(require.main.filename) : process.cwd(), f = path.resolve(dir, file);
   if (!fs.existsSync(f)) throw new Error(`track: no file '${file}' (a path from the score's folder)`);
-  let FF = process.env.FFMPEG; if (!FF) try { FF = require(path.join(__dirname, '..', 'node_modules', 'ffmpeg-static')); } catch (e) {}
-  if (!FF || !fs.existsSync(FF)) throw new Error('track: ffmpeg not found. Run the engine setup once: bash setup.sh');
-  const d = Math.max(0, until - at), raw = require('child_process').execFileSync(FF, ['-v', 'error', '-ss', String(from), '-t', String(d), '-i', f,
-    '-ac', '2', '-ar', String(SR), '-f', 'f32le', '-'], { maxBuffer: 1 << 30 });
-  const x = new Float32Array(raw.buffer, raw.byteOffset, raw.length / 4), n = x.length >> 1;
+  const x = decode(f, from, Math.max(0, until - at)), n = x.length >> 1;
   if (!n) throw new Error(`track: nothing to play in '${file}' from ${from} s`);
-  const L = zeros(n), R = zeros(n), fi = Math.max(1, N_(fadeIn)), fo = Math.max(1, N_(Math.min(fadeOut, n / SR)));
-  for (let i = 0; i < n; i++) { const e = Math.min(1, i / fi, (n - i) / fo); L[i] = x[2 * i] * e; R[i] = x[2 * i + 1] * e; }
+  const L = zeros(n), R = zeros(n);
+  for (let i = 0; i < n; i++) { L[i] = x[2 * i]; R[i] = x[2 * i + 1]; }
+  lay(M, L, R, at, { gain, fadeIn, fadeOut, breaks });
+}
+function decode(f, from = 0, d = 0) {
+  let FF = process.env.FFMPEG; if (!FF) try { FF = require(path.join(__dirname, '..', 'node_modules', 'ffmpeg-static')); } catch (e) {}
+  if (!FF || !fs.existsSync(FF)) throw new Error('ffmpeg not found. Run the engine setup once: bash setup.sh');
+  const raw = require('child_process').execFileSync(FF, ['-v', 'error', ...(from ? ['-ss', String(from)] : []), ...(d ? ['-t', String(d)] : []), '-i', f,
+    '-ac', '2', '-ar', String(SR), '-f', 'f32le', '-'], { maxBuffer: 1 << 30 });
+  return new Float32Array(raw.buffer, raw.byteOffset, raw.length / 4);
+}
+function lay(M, L, R, at, { gain, fadeIn, fadeOut, breaks }) {
+  const n = L.length, fi = Math.max(1, N_(fadeIn)), fo = Math.max(1, N_(Math.min(fadeOut, n / SR)));
+  for (let i = 0; i < n; i++) { const e = Math.min(1, i / fi, (n - i) / fo); L[i] *= e; R[i] *= e; }
   const k = gain * Math.pow(10, (-16 - loudness([L, R]).lufs) / 20) / 1.4142;   // add() at a full pan gives 1.4142
-  M.bus = 'bed'; M.gates = breaks;
+  M.bus = 'music'; M.gates = breaks;
   try { M.add(L, at, k, { pan: -1 }); M.add(R, at, k, { pan: 1 }); } finally { M.bus = null; M.gates = null; }
 }
 
@@ -448,7 +398,7 @@ function sonic_logo(M, t_land, t_chime, gain = 1.0) {
 // ---------------------------------------------------------------- the voice
 // voice(M, id, { duck, over }) places a film's narrator: the clips in films/<id>.voice.json (film.sh <id> voice writes
 // it from the lines on screen), each where its words appear. Centred and dry, every line at one loudness, its peaks
-// held about 8 dB over it. duck: dB the groove drops under the voice (10; the film's events drop a third of that, so a
+// held about 8 dB over it. duck: dB the music drops under the voice (10; the film's events drop a third of that, so a
 // tap still reads under a word); over: dB the voice then sits above the music under it (10).
 function voice(M, id, { over = 10, duck = 10 } = {}) {
   if (process.env.NOVOICE) return;   // the music alone
@@ -478,7 +428,7 @@ function resample(x, from, to) {                  // windowed sinc (Lanczos, 16 
 // ---------------------------------------------------------------- recorded sounds (engine/sounds/, CC0: sounds/LICENSE.md)
 // The film's element sounds are recordings, not synthesis: a real keyboard, real swooshes, real impacts and short UI
 // tones. sample('keys/key03') returns one at SR, its peak at 1, so a score sets its level with add's gain.
-// sounds() lists the names. The synthesized hits above stay for the groove and for what no recording covers.
+// sounds() lists the names. The synthesized hits above stay for what no recording covers.
 const SOUNDS = path.join(__dirname, '..', 'sounds'), _samples = {};
 function sample(name) {
   if (!_samples[name]) {
@@ -524,6 +474,6 @@ function voiceClip(file) {
 
 module.exports = { SR, tvec, noise, map, mul, mix, phaseOf, linspace, bp, hp, lp, hz, saw, env_adsr, rngOf,
   kick, clap, hat, shaker, crash, sub_boom, whoosh, riser, reverse_swell, blip, tick, pop, bell, thock, glide, sonar, thud, marimba,
-  clack, key, buzz, odometer, pad_chord, bass_note, sub_note, fftconvolve, Mix, sonic_logo, bed, cue, tr, voice, readWav, resample,
+  clack, key, buzz, odometer, fftconvolve, Mix, sonic_logo, music, bed, cue, voice, readWav, resample,
   sample, sounds, typing, loudness, track,
   _reseed: s => { rng = rngOf(s); } };
