@@ -3,9 +3,9 @@
 Short product films made from your product's real screens, rendered from code. Every scene grows
 out of the last one, so the film never cuts to the next slide.
 
-[![oneshot: product films, from one line. Watch the 28-second film](.github/assets/poster.png)](https://github.com/scalation-ai/oneshot/releases/download/v0.1.0/oneshot-16x9.mp4)
+[![oneshot's own film, made with oneshot: one line typed, three concepts, one opens into a film, then every format](.github/assets/films/oneshot.gif)](https://github.com/scalation-ai/oneshot/releases/download/v0.3.0/oneshot-16x9.mp4)
 
-*The film above was made with oneshot. Click the picture to download it (28 seconds, with sound).*
+*Made with oneshot, about itself. Click it for the 20-second film with sound.*
 
 oneshot is an agent skill. You ask your coding agent for a film of your product. It reads your
 product's own colours and fonts and captures the screens the film will show. It proposes three
@@ -16,6 +16,15 @@ film, renders it frame by frame and reviews it before handing it over.
 - 9:16 for the phone feed and 16:9, plus 1:1 and 4:5 when asked.
 - A series of films shares one brand, one set of numbers and one set of rules.
 - Optional English narration, generated on your own computer.
+
+## Examples
+
+Each film is a GIF here; click it for the MP4 with sound. Products other than oneshot are made up for
+these samples.
+
+| [![Paperlane: messy notes become a plan](.github/assets/films/paperlane.gif)](https://github.com/scalation-ai/oneshot/releases/download/v0.3.0/paperlane-16x9.mp4) |
+|---|
+| **Paperlane**, a notes and docs app. Dive style: four messy bullets lift into cards on a board, one card opens into its own page, its steps tick off, and it slides to Done. 17 s, 16:9. |
 
 ## Install
 
