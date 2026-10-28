@@ -1,7 +1,10 @@
 /* The film library. Every film is render(t): a pure function of time, so any frame renders on its own.
    Coordinates are stage pixels: 1080 x 1920 for a phone film, 1920 x 1080 for its 16:9 cut and for desktop films. */
-const Q=new URLSearchParams(location.search);
-const CAPTURE=Q.has('capture');
+// HF: the page is a HyperFrames composition (tools/hf.cjs), loaded without a query: its format is written into the
+// page as __OS_Q, and HyperFrames seeks the film through the timeline boot() registers
+const HF=window.__OS_Q!=null;
+const Q=new URLSearchParams(HF?window.__OS_Q:location.search);
+const CAPTURE=Q.has('capture')||HF;
 // ?w=1 renders the 16:9 cut: the same phone world (authored at 1080 x 1920) placed on the left,
 // the type band set as a panel on the right, the end card re-centred. Everything else is shared.
 // A desktop film declares `const FILM_FORMAT='desktop';` before its includes: 16:9 always, no phone.
@@ -374,7 +377,15 @@ function boot(DUR,render,after){
     (window.__osFlights||[]).forEach(f=>f.measure(render));   // moves.js: each shared element's two ends, measured once
     if(after)after();render(0);
     stage.style.transform=prev;
+    // HyperFrames renders the film by seeking one paused timeline, the film's length, that calls render(t). Its
+    // shutter takes several times around each frame's own (a quarter frame either side); one on the far side of a
+    // declared cut is held on the frame's side of it, so a cut is never blurred into a dissolve
+    if(HF){const P={t:0},cuts=window.__os.cuts,tl=gsap.timeline({paused:true});
+      const at=t=>{const T=Math.round(t*60)/60;
+        for(const c of cuts){if(T<c&&t>=c)return c-1e-4;if(T>=c&&t<c)return c;}return t;};
+      tl.to(P,{t:DUR,duration:DUR,ease:'none',onUpdate:()=>render(at(P.t))});window.__timelines.film=tl;}
     if(CAPTURE){window.__ready=true;const t=parseFloat(Q.get('t')||'0');render(t);return;}
+    //PLAYER{  the film playing on its own in a browser; tools/hf.cjs leaves this out of a HyperFrames composition
     fit();addEventListener('resize',fit);
     let t0=performance.now(),paused=false,tp=0;
     const qt=parseFloat(Q.get('t'));if(!isNaN(qt)){paused=true;tp=qt;}
@@ -385,5 +396,6 @@ function boot(DUR,render,after){
     stage.addEventListener('click',()=>{paused=!paused;if(!paused)t0=performance.now()-tp*1000;});
     // studio.html drives the film from its soundtrack: {seek:t} holds the film on that time
     addEventListener('message',e=>{const d=e.data||{};if(typeof d.seek==='number'){paused=true;tp=clamp(d.seek,0,DUR-1e-3);}});
+    //}PLAYER
   });
 }

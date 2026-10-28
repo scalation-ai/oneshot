@@ -2,10 +2,15 @@
   "name": "oneshot-engine",
   "private": true,
   "type": "commonjs",
-  "description": "Renders product films frame by frame from their HTML timelines, with their scores",
+  "description": "Builds product films from their HTML timelines and renders them with HyperFrames, with their scores",
   "dependencies": {
     "ffmpeg-static": "^5.2.0",
+    "gsap": "3.15.0",
+    "hyperframes": "0.8.210",
     "playwright": "1.60.0",
     "pngjs": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

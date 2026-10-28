@@ -47,7 +47,7 @@ Start from `film.sh new <id> phone|desktop|app`: `phone` for a phone app (9:16, 
     boot(DUR,render,()=>{ LINES.forEach(L=>L.fit()); render(TB(LAST)-.05); const s=L4.stopXY(); FROM=[s[0],s[1],Math.max(5,s[2]*.36)]; });
 
 `render(t)` is a pure function of time. It must set every property it ever changes, on every call:
-a frame is rendered in any order (the renderer runs four pages in parallel, the studio scrubs
+a frame is rendered in any order (the renderer runs several pages in parallel, the studio scrubs
 backwards), so nothing may depend on the frame before. `film.sh <id> check` proves it: it renders
 eight frames in order and again in reverse, and names any that differ.
 
@@ -251,9 +251,16 @@ library marks its own layers; mark what a film adds.
 - **When timing changes, move the matching hits in the score.** Then run `onsets`.
 - **Quote every path in the shell**; zsh does not split words, so pass width and height as two
   arguments, never as "1080 1920" in one variable.
-- The pipeline already handles these: fonts load before the first capture, screenshots are taken
-  with a clip scale (CDP ignores the device scale factor), and the encode tags BT.709 so players do
-  not shift the accent colour.
+- **Declare every hard cut** (`cut:true` on a scene; the punch style declares its own). The shutter
+  takes times a quarter frame either side of each frame's own, and across a declared cut it holds
+  them on the frame's side, so the cut stays clean. A jump it was not told about is blurred into a
+  one-frame smear of both shots.
+- **Let a parent settle before something inside it lands still.** HyperFrames blurs each moving
+  element from its own poses, and a still element inside one that is still scaling or sliding can
+  drop out of a frame. Look at the preview's frames around such a landing, not only at stills.
+- The pipeline already handles these: fonts load before the first frame, every format is written
+  into the composition (HyperFrames loads the page without a query), and the MP4 is tagged BT.709
+  so players do not shift the accent colour.
 - **After changing shared code**, render stills of the existing films before and after and compare
   them with `node engine/tools/framediff.cjs <before> <after>`: they must match unless the change is
   meant for them.

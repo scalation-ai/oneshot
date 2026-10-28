@@ -34,14 +34,14 @@
 #   onsets    the soundtrack's strongest hits against the bar lines (does the sound land on the picture)
 #   listen    the soundtrack in numbers: hits a second, low end, mud, dings, loudness against the series' other films
 #             (REF=<clip> to compare with a reference)
-#   preview   the film the user watches: 1x with motion blur (up to 8 captures on a moving frame, one on a hold), into
-#             renders/. A preview without the shutter strobes on every fast move and is judged on that
+#   preview   the film the user watches: rendered by HyperFrames at 1x with its motion blur (a 180 degree shutter,
+#             never across a cut), into renders/. A preview without the shutter strobes on every fast move
 #   subs      the film's words as caption files (.srt and .vtt) for a platform's own captions, timed as spoken in a film
 #             with a voice, else as its lines show; preview and final write them next to the MP4
-#   quick     1x, one capture a frame, no motion blur: a fast look for yourself, never what the user is shown
-#   final     2x supersampled with motion blur sized per frame (1 capture on a hold, up to 16 on the fastest move,
-#             never across a cut); only once the preview is approved. About 1.7 times the preview's time. quick, preview
-#             and final print a line every tenth of the way with the time left (WORKERS=n: browsers at once, 4 by default)
+#   quick     1x, no motion blur: a fast look for yourself, never what the user is shown
+#   final     the preview's motion blur at twice the size, scaled back down (4:5 stays at 1x); only once the preview is
+#             approved. quick, preview and final print a line every tenth of the way with the time left, and keep
+#             HyperFrames' full output in renders/<film>-<format>/render.log (KEEP=1 keeps its composition too)
 #   gif       a looping GIF of the final (or the preview, rendered first if there is none), no sound (GIFW, GIFFPS)
 # The format defaults to the film's first: phone (9x16), wide (16x9), square (1x1), 4x5, or all of the film's in turn.
 set -e
@@ -150,18 +150,12 @@ case $CMD in
   subs) node "$T_/subs.cjs" "$PROJ" "$ID" "$FMT" "$OUTD/$TITLE $FMT";;
   sheet) node "$T_/sheet.cjs" "$HTML" "$WORK/sheet" $DUR 0.125 $W $H "$Q";;
   quick|preview|final)
-    # the final's shutter holds up to 16 captures a frame, the preview's 8; render.cjs takes only as many as each frame's
-    # motion needs, and encode.cjs blends each frame's own (frames.json)
-    case $CMD in final) DSF=2; K=16; SS=2;; preview) DSF=1; K=8; SS=1;; *) DSF=1; K=1; SS=1;; esac
-    rm -rf "$WORK/raw"
-    # its progress shows as it goes (a line every tenth, with the time left) and is kept in render.log. Four browsers
-    # capture at once (WORKERS=n for another count): eight were no faster on a 10-core Mac
-    node "$T_/render.cjs" "$HTML" "$WORK/raw" $DSF $K "${WORKERS:-4}" 0 $FR $W $H "$Q" 2>&1 | tee "$WORK/render.log"
-    [ "${PIPESTATUS[0]}" = 0 ] || { echo "The renderer stopped: see $WORK/render.log"; exit 1; }
+    # HyperFrames renders it (tools/hf.cjs): the film made a composition in renders/<film>-<format>/hf, its timeline
+    # seeked 60 times a second, with HyperFrames' motion blur (none for quick); the final at twice the size, scaled down
     [ -f "$WAV" ] || soundtrack
     if [ $CMD = final ]; then TAG=""; elif [ $CMD = preview ]; then TAG=" PREVIEW"; else TAG=" QUICK"; fi
-    node "$T_/encode.cjs" "$WORK/raw" $K $SS "$WAV" "$OUTD/$TITLE $FMT$TAG.mp4"
-    [ -n "$KEEP" ] || rm -rf "$WORK/raw"
+    node "$T_/hf.cjs" "$HTML" "$WAV" $W $H $DUR "$Q" "$WORK/hf" "$OUTD/$TITLE $FMT$TAG.mp4" $CMD || exit 1
+    [ -n "$KEEP" ] || { cp "$WORK/hf/render.log" "$WORK/render.log"; rm -rf "$WORK/hf"; }
     [ $CMD = quick ] || node "$T_/subs.cjs" "$PROJ" "$ID" "$FMT" "$OUTD/$TITLE $FMT$TAG";;
   gif) SRC="$OUTD/$TITLE $FMT.mp4"; [ -f "$SRC" ] || SRC="$OUTD/$TITLE $FMT PREVIEW.mp4"
        [ -f "$SRC" ] || { bash "$ENGINE/film.sh" "$F" preview "$FMT" || exit $?; }

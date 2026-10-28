@@ -61,9 +61,10 @@ the **Marketplaces** tab, then **Enable auto-update**.
 
 ## Requirements
 
-- Node.js 18 or newer, on macOS or Linux.
-- The first run installs Playwright, ffmpeg and a PNG reader inside the skill's `engine/` folder,
-  and a headless Chrome in Playwright's shared cache.
+- Node.js 22 or newer, on macOS or Linux.
+- The first run installs HyperFrames, GSAP, Playwright, ffmpeg and a PNG reader inside the skill's
+  `engine/` folder, and a headless Chrome for Playwright and one for HyperFrames in their shared
+  caches.
 - Narration (`--voice`) downloads about 730 MB once. That is Kokoro, a small open text-to-speech
   model that runs on the CPU.
 - On Linux, if Chromium will not start, run once: `npx playwright install-deps chromium`.
@@ -71,8 +72,9 @@ the **Marketplaces** tab, then **Enable auto-update**.
 ## How it works
 
 Each film is one HTML page whose `render(t)` sets every element from the time alone, so any frame
-renders on its own. A headless Chrome captures 60 frames a second. A sound kit writes the score on
-the same timeline, and ffmpeg joins the two.
+renders on its own. [HyperFrames](https://github.com/heygen-com/hyperframes) renders it at 60
+frames a second, with a camera shutter's motion blur. A sound kit writes the score on the same
+timeline, and HyperFrames lays it under the picture.
 
 Everything the skill makes goes in one folder in your project, `oneshot-output/`. Nothing else in
 your folder changes. Every film reads three files from that folder:
@@ -105,7 +107,8 @@ CSS, media and animations into video, with a CLI, agent skills and a catalog of 
 ready-made blocks. [brag](https://github.com/latent-spaces/brag) is a skill built on it that turns
 the project you just built into a launch video and writes the post to share it.
 
-oneshot is narrower: films of a product's own screens, made as a series.
+oneshot renders with HyperFrames, and is narrower: films of a product's own screens, made as a
+series.
 
 - **Your real screens, rebuilt.** It captures the screens a film will show and rebuilds them in
   HTML inside your product's own header, sidebar and cards. Numbers roll and rows move, and
@@ -118,8 +121,8 @@ oneshot is narrower: films of a product's own screens, made as a series.
   from the same timeline as the picture.
 - **Checked before you watch.** Carry, rhythm, legibility and sound are checked, then two reviewer
   passes, before the film reaches you.
-- **Its own small engine.** Node, Playwright and ffmpeg, on your computer. Narration comes from a
-  local model.
+- **Everything on your computer.** HyperFrames renders, Playwright reads and checks, and narration
+  comes from a local model.
 
 Use HyperFrames to build any video from HTML, brag for a launch video of the project you just
 built, and oneshot for a series of product films that stay true to the product.
