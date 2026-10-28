@@ -12,7 +12,8 @@ the detail becomes the card whose number moved, the full stop flies into the wor
 each other read as a slideshow however good each one is.
 
 Each film is one HTML page whose `render(t)` sets every element from the time alone, so any frame renders on
-its own. [HyperFrames](https://github.com/heygen-com/hyperframes) (Apache-2.0) renders it: it seeks the film 60
+its own; GSAP tweens on the film's own timeline (`TL`) are seeked to the same time first
+(`references/engine.md`, GSAP in a film). [HyperFrames](https://github.com/heygen-com/hyperframes) (Apache-2.0) renders it: it seeks the film 60
 times a second in its own headless Chrome, with a camera shutter's motion blur. A sound kit writes the score on the
 same timeline (a real track cut on its bar lines, and recorded element sounds placed on their frames), and HyperFrames lays it
 under the picture. Everything runs on Node. Paths below are relative to this skill's folder; run
