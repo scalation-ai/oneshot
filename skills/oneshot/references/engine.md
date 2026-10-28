@@ -144,7 +144,43 @@ It measures the wordmark itself the first time it shows.
 **`aurora(t,k)`** the slow light on the night stage (call it every frame; `k` its opacity).
 **`wideGlide(c)`** on a phone film's 16:9 cut, 0 keeps the phone left of the line panel, 1 centres it
 for bars with no line. **`boot(DUR,render,after)`** loads the fonts, runs `after` once, then plays
-live (space pauses, arrows step a frame) or, in capture mode, waits for the renderer.
+live (space pauses, arrows step a frame) or, in capture mode, waits for the renderer. On every frame it
+seeks the film's GSAP timeline, `TL`, to the time first, then calls `render(t)`.
+
+## GSAP in a film
+
+Every built film has [GSAP](https://gsap.com) 3 and its MotionPathPlugin inlined (free to use under GSAP's
+own licence, commercial work included), and the library gives
+it one paused timeline, `TL`. `boot` seeks `TL` to `t` before each `render(t)`, so a tween on it is as
+pure a function of time as `render` itself, and HyperFrames blurs what it moves like anything else.
+Use it where the library has no move: an ease with character (`back.out(1.7)`, `elastic.out(1,.5)`,
+`expo.inOut`), a flight along an arc, a stagger across a list, a counter.
+
+    // in boot's after(), or once the elements exist: times in seconds, from the film's own grid
+    gsap.set(CHIP, { x: 120, y: 900 });                                     // every start state, set once
+    TL.to(CHIP, { motionPath: { path: [{x:120,y:900},{x:520,y:300},{x:940,y:860}], curviness: 1.4 },
+                  duration: 1.2, ease: 'power2.inOut' }, TB(4));
+    TL.from(ROWS, { y: 40, opacity: 0, stagger: B / 4, duration: .5, ease: 'back.out(1.7)', immediateRender: true }, TB(5));
+    const N = { v: 0 };
+    TL.to(N, { v: 240, duration: 1, ease: 'power3.out', onUpdate: () => { AMT.textContent = '$' + Math.round(N.v); } }, TB(6));
+
+The rules, each learned on a real film:
+
+- **One owner per property.** A property a tween moves is never set by `render(t)` too: `render` runs
+  after the seek and wins, and the tween seems dead. GSAP composes `x`, `y`, `scale` and `rotation`
+  into the element's `transform`, so an element GSAP moves takes no `style.transform` from `render`:
+  move its parent there instead.
+- **Set every start state.** `gsap.set` (or `TL.set(el, {...}, 0)`) before the tweens, and
+  `immediateRender: true` on a `from` or `fromTo` whose start must show before it begins. Switch an
+  element on with `TL.set(el, { autoAlpha: 1 }, t)`, never only through a `fromTo`'s from values:
+  HyperFrames' blur can lose an element that is only ever shown that way.
+- **Measure before, never during.** Read layout once (in `after`) and keep the numbers; an `onUpdate`
+  that measures the page reads a different page at every seek. An `onUpdate` only writes.
+- **No `TL.call`.** A seek jumps; a callback that fires on the way past runs in one order and not the
+  other. Anything a call would do, a `set` at that time does purely.
+- **Animate transforms and opacity,** not `left`, `top`, `width` or `height`: they lay the page out
+  again on every frame and blur badly.
+- `film.sh <id> check` proves the purity as before: eight frames in order and in reverse must match.
 
 ## Desktop films (`engine/lib/desk.js`)
 

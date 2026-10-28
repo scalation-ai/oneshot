@@ -72,9 +72,10 @@ the **Marketplaces** tab, then **Enable auto-update**.
 ## How it works
 
 Each film is one HTML page whose `render(t)` sets every element from the time alone, so any frame
-renders on its own. [HyperFrames](https://github.com/heygen-com/hyperframes) renders it at 60
-frames a second, with a camera shutter's motion blur. The score is a real track cut on its bar
-lines, with recorded sounds on the same timeline as the picture.
+renders on its own, and its [GSAP](https://gsap.com) tweens sit on a timeline seeked to the same
+time. [HyperFrames](https://github.com/heygen-com/hyperframes) renders it at 60 frames a second,
+with a camera shutter's motion blur. The score is a real track cut on its bar lines, with recorded
+sounds on the same timeline as the picture.
 
 Everything the skill makes goes in one folder in your project, `oneshot-output/`. Nothing else in
 your folder changes. Every film reads three files from that folder:

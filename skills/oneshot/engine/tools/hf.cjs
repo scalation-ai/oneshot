@@ -16,18 +16,18 @@ const [,, html, wav, WS, HS, DURS, query, work, out, mode] = process.argv;
 const W = +WS, H = +HS, DUR = +DURS, NM = path.join(__dirname, '..', 'node_modules');
 const die = m => { console.error(m); process.exit(1); };
 if (!['quick', 'preview', 'final'].includes(mode)) die('usage: hf.cjs <film.html> <wav|none> <W> <H> <DUR> <query> <workdir> <out.mp4> quick|preview|final');
-const HFBIN = path.join(NM, 'hyperframes', 'bin', 'hyperframes.mjs'), GSAP = path.join(NM, 'gsap', 'dist', 'gsap.min.js');
-if (!fs.existsSync(HFBIN) || !fs.existsSync(GSAP)) die('HyperFrames is not installed. Run the engine setup once: bash setup.sh');
+const HFBIN = path.join(NM, 'hyperframes', 'bin', 'hyperframes.mjs');
+if (!fs.existsSync(HFBIN)) die('HyperFrames is not installed. Run the engine setup once: bash setup.sh');
 let FF = process.env.FFMPEG;
 if (!FF) try { FF = require(path.join(NM, 'ffmpeg-static')); } catch (e) {}
 
-// the composition: the film's page without its player, its format written in, GSAP inlined, the stage inside a root
+// the composition: the film's page (GSAP already inlined by build.cjs) without its player, its format written in, the stage inside a root
 // that tells HyperFrames the frame's size, the film's length and the shutter, and the soundtrack as its audio
 let src = fs.readFileSync(html, 'utf8');
 src = src.replace(/\/\/PLAYER\{[\s\S]*?\/\/\}PLAYER/, '');
 if (!src.includes('<div id="stage"></div>')) die(`${html}: no <div id="stage"></div> to render`);
-const head = `<script>window.__OS_Q=${JSON.stringify(query || '')};</script>\n<script>${fs.readFileSync(GSAP, 'utf8')}</script>`;
-src = src.replace('<head>', () => '<head>\n' + head);
+if (!src.includes('gsap')) die(`${html}: built without GSAP: build it again (film.sh <film> build)`);
+src = src.replace('<head>', () => `<head>\n<script>window.__OS_Q=${JSON.stringify(query || '')};</script>`);
 const blur = mode === 'quick' ? '' : ' data-motion-blur="on" data-motion-blur-shutter="180" data-motion-blur-events="on"';
 const audio = wav !== 'none' ? `\n<audio id="soundtrack" src="film.wav" data-start="0" data-duration="${DUR}" data-volume="1"></audio>` : '';
 src = src.replace('<div id="stage"></div>', () => `<div id="root" data-composition-id="film" data-start="0" data-width="${W}" ` +
