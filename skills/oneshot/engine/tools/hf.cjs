@@ -18,8 +18,9 @@ const die = m => { console.error(m); process.exit(1); };
 if (!['quick', 'preview', 'final'].includes(mode)) die('usage: hf.cjs <film.html> <wav|none> <W> <H> <DUR> <query> <workdir> <out.mp4> quick|preview|final');
 const HFBIN = path.join(NM, 'hyperframes', 'bin', 'hyperframes.mjs');
 if (!fs.existsSync(HFBIN)) die('HyperFrames is not installed. Run the engine setup once: bash setup.sh');
-let FF = process.env.FFMPEG;
+let FF = process.env.FFMPEG, FP = null;
 if (!FF) try { FF = require(path.join(NM, 'ffmpeg-static')); } catch (e) {}
+try { FP = require(path.join(NM, '@ffprobe-installer', 'ffprobe')).path; } catch (e) {}
 
 // the composition: the film's page (GSAP already inlined by build.cjs) without its player, its format written in, the stage inside a root
 // that tells HyperFrames the frame's size, the film's length and the shutter, and the soundtrack as its audio
@@ -43,7 +44,10 @@ const master = big ? path.join(work, 'master.mp4') : out;
 const args = [HFBIN, 'render', work, '--fps', '60', '--output', master, '--crf', mode === 'quick' ? '18' : mode === 'preview' ? '12' : '10'];
 if (mode === 'quick') args.push('--page-motion-blur', 'off');
 if (big) args.push('--resolution', UP);
+// HyperFrames encodes with the engine's own ffmpeg and ffprobe, so the computer needs none of its own
 const env = { ...process.env, HYPERFRAMES_NO_TELEMETRY: '1', DO_NOT_TRACK: '1', HYPERFRAMES_NO_UPDATE_CHECK: '1', HYPERFRAMES_SKIP_SKILLS: '1' };
+if (!env.HYPERFRAMES_FFMPEG_PATH && FF && fs.existsSync(FF)) env.HYPERFRAMES_FFMPEG_PATH = FF;
+if (!env.HYPERFRAMES_FFPROBE_PATH && FP && fs.existsSync(FP)) env.HYPERFRAMES_FFPROBE_PATH = FP;
 const log = fs.createWriteStream(path.join(work, 'render.log'));
 const t0 = Date.now();
 let told = 0, buf = '', tail = [], blurLine = '';
