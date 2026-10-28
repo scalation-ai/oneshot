@@ -3,6 +3,11 @@
 // HF: the page is a HyperFrames composition (tools/hf.cjs), loaded without a query: its format is written into the
 // page as __OS_Q, and HyperFrames seeks the film through the timeline boot() registers
 const HF=window.__OS_Q!=null;
+// TL: the film's own GSAP timeline, paused. boot() seeks it to t before every render(t), so a tween put on it
+// (TL.to(el,{x:200,ease:'back.out(1.6)',duration:.5},TB(2))) is as pure a function of time as render(t)
+// (references/engine.md, GSAP in a film)
+if(window.MotionPathPlugin)gsap.registerPlugin(MotionPathPlugin);
+const TL=gsap.timeline({paused:true});
 const Q=new URLSearchParams(HF?window.__OS_Q:location.search);
 const CAPTURE=Q.has('capture')||HF;
 // ?w=1 renders the 16:9 cut: the same phone world (authored at 1080 x 1920) placed on the left,
@@ -363,7 +368,8 @@ function EndCard({chip:chipText,cta,small}={}){
 }
 
 /* ---------- boot: fonts, fit, seek interface ---------- */
-function boot(DUR,render,after){
+function boot(DUR,film,after){
+  const render=t=>{TL.seek(t,false);film(t);};   // the timeline's tweens first, then render(t) over them
   window.__seek=t=>{render(t);return true;};
   window.__DUR=DUR;window.__FPS=60;
   // what `film.sh read` needs to know about the film: its tempo, and the hard cuts it means (Cut adds the punch style's)

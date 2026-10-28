@@ -2,9 +2,9 @@
 
 Every film is cut in one of five styles and opens one of three ways. `film.sh new` picks both at random
 among those that fit the mood and the length, the series' least used style first and never the last
-film's style or opening. It also picks the tempo and the musical key. `films.json` keeps each film's
-picks. So two films of one feature, or the same feature for two products, never come out cut the same
-way.
+film's style or opening. It also picks the music, a track of the mood, and the film takes its tempo.
+`films.json` keeps each film's picks. So two films of one feature, or the same feature for two products, never
+come out cut the same way.
 
 Keep the pick and write the script in it. Change it only when the feature cannot be told that way, and
 say why in the script. When the user asks for a look ("fast cuts", "calm"), choose it with `--style` and
@@ -90,7 +90,7 @@ one film twice. Write each film's beats into its script.
 may enter after a change (`LOOK.settle`) and leave before one (`LOOK.lead`), and the stage's glow
 (`LOOK.glow`). The scene list, `SCENES`, goes to `Cut(LOOK,SCENES,{...})`: each scene's start, screen,
 card, shots (`aim(x,y,z)`: the point to centre and how much larger), `via`, `hits` and `seq`. The
-library: `references/engine.md`. The score's groove is the mood's `bed()`, and a change of scene the
+library: `references/engine.md`. The score's music is the film's track, `music()`, and a change of scene the
 music does not already mark gets the style's `cue()`, a recorded sound: `references/sound.md`.
 
 To change the style of a film already begun, start a new one with `--style` and move the screens

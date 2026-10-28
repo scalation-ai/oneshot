@@ -72,9 +72,10 @@ the **Marketplaces** tab, then **Enable auto-update**.
 ## How it works
 
 Each film is one HTML page whose `render(t)` sets every element from the time alone, so any frame
-renders on its own. [HyperFrames](https://github.com/heygen-com/hyperframes) renders it at 60
-frames a second, with a camera shutter's motion blur. A sound kit writes the score on the same
-timeline, and HyperFrames lays it under the picture.
+renders on its own, and its [GSAP](https://gsap.com) tweens sit on a timeline seeked to the same
+time. [HyperFrames](https://github.com/heygen-com/hyperframes) renders it at 60 frames a second,
+with a camera shutter's motion blur. The score is a real track cut on its bar lines, with recorded
+sounds on the same timeline as the picture.
 
 Everything the skill makes goes in one folder in your project, `oneshot-output/`. Nothing else in
 your folder changes. Every film reads three files from that folder:
@@ -95,6 +96,7 @@ Say them in words, or pass them as flags (`/oneshot --duration 15 --draft`):
 |---|---|
 | `--duration <seconds>` | 15, 30 (the default), 45 or 60 |
 | `--sound <mood>` | drive, calm, upbeat, bold, playful or minimal |
+| `--music <file>` | Your own track, instead of one from the CC0 catalogue |
 | `--voice [name]` | A narrator reads each line as it appears, in English |
 | `--format <list>` | 9:16, 16:9, 1:1, 4:5, or `all` |
 | `--ref <video>` | A clip whose feel the film should have |
@@ -117,8 +119,9 @@ series.
   the next one, and a check measures it.
 - **No invented numbers.** Every number and claim comes from your `story.md` and `rules.md`, and
   every film in a series shares them.
-- **Sound written on the picture.** The score and the recorded sounds are placed on their frames,
-  from the same timeline as the picture.
+- **Real music, cut to the picture.** Your own track, or a public-domain (CC0) one from a short
+  catalogue, cut on its bar lines so its drop lands on the reveal. Recorded sounds go on top, each
+  on its frame.
 - **Checked before you watch.** Carry, rhythm, legibility and sound are checked, then two reviewer
   passes, before the film reaches you.
 - **Everything on your computer.** HyperFrames renders, Playwright reads and checks, and narration

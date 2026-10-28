@@ -1,6 +1,6 @@
 // Build a film: node build.cjs <project> <name>  ->  <project>/films/<name>.html
-// Inlines the project's brand (brand.json), its fonts, lib.css, every //INCLUDE file and every /*INLINE path*/null
-// data file, so a built film plays on its own anywhere (open it, mail it, drop it in a chat).
+// Inlines GSAP (with its MotionPathPlugin), the project's brand (brand.json), its fonts, lib.css, every //INCLUDE file
+// and every /*INLINE path*/null data file, so a built film plays on its own anywhere (open it, mail it, drop it in a chat).
 // //INCLUDE and /*INLINE*/ look in the project's films/ first, then in the engine (lib/ for code, the engine
 // folder for data): a project can add its own screens (//INCLUDE screens.js) next to its films.
 'use strict';
@@ -55,6 +55,10 @@ function find(rel, dirs) {
 const mark = (brand.fonts || {}).wordmark ? '\n' + face('wordmark') : '';
 src = src.replace('<!--FONTS-->', () => `<style>\n${face('head')}\n${face('body')}${mark}\n</style>`);
 src = src.replace('/*CSS*/', () => fs.readFileSync(path.join(LIB, 'lib.css'), 'utf8'));
+// GSAP first, so lib.js and the film can use it (lib.js: the film's timeline, TL)
+const GD = path.join(ENGINE, 'node_modules', 'gsap', 'dist');
+if (!fs.existsSync(path.join(GD, 'gsap.min.js'))) die('GSAP is not installed. Run the engine setup once: bash setup.sh');
+src = src.replace('<head>', () => '<head>\n<script>' + ['gsap.min.js', 'MotionPathPlugin.min.js'].map(f => fs.readFileSync(path.join(GD, f), 'utf8')).join('\n') + '</script>');
 src = src.replace(/^\/\/INCLUDE (\S+)$/gm, (_, f) => find(f, [FILMS, LIB]));
 src = src.replace('/*BRAND*/null', () => Object.keys(brand).length ? JSON.stringify(brand) : 'null');
 // /*INLINE path*/null pastes a data file, e.g. the world map: /*INLINE data/countries-110m.json*/null
